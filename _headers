@@ -1,0 +1,14 @@
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/js/index-Dbfo3jW4.js
+  Cache-Control: public, max-age=31536000, immutable
+/css/index--cjF3lhQ.css
+  Cache-Control: public, max-age=31536000, immutable
+/images/*
+  Cache-Control: public, max-age=31536000, immutable
+/js/player.js
+  Cache-Control: public, max-age=3600
+/js/smartplayer.js
+  Cache-Control: public, max-age=3600
