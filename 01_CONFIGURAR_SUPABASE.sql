@@ -5,7 +5,7 @@ create table if not exists public.profiles (
   email text not null,
   name text,
   phone text,
-  plan text not null default 'free' check (plan in ('free', 'premium')),
+  plan text not null default 'free' check (plan in ('free', 'basic', 'premium')),
   active boolean not null default false,
   purchase_date timestamptz,
   timezone text not null default 'America/Sao_Paulo',
