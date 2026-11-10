@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Clube do Segredo">
     <meta name="description" content="O Clube do Segredo te ajuda a continuar fazendo quando a rotina aperta.">
-    <title>Clube do Segredo</title>
+    <title>Clube do Segredo | Acesso de compradores</title>
     <script>
       try {
         if ('serviceWorker' in navigator) {
@@ -29,7 +29,23 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&amp;family=Cormorant+Garamond:wght@500;600;700&amp;family=Poppins:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
-    <script type="module" src="/js/index-Dbfo3jW4.js"></script>
+    <script src="/js/config.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var ok = /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(window.APP_SUPABASE_URL || '') &&
+          /^(sb_publishable_|eyJ)/.test(window.APP_SUPABASE_ANON_KEY || '');
+        if (!ok) {
+          document.getElementById('root').innerHTML =
+            '<main style="min-height:100vh;display:grid;place-items:center;background:#16382a;color:#fff;padding:24px;font:16px system-ui">' +
+            '<section style="max-width:460px"><h1>Configuração pendente</h1><p>Adicione seu Project URL e sua chave pública em <b>js/config.js</b> para ativar o login.</p></section></main>';
+          return;
+        }
+        var script = document.createElement('script');
+        script.type = 'module';
+        script.src = '/js/index-Dbfo3jW4.js';
+        document.head.appendChild(script);
+      });
+    </script>
     <link rel="stylesheet" crossorigin="" href="/css/index--cjF3lhQ.css">
   </head>
   <body>
