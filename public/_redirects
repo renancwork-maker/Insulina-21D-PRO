@@ -1,2 +1,7 @@
-/admin    /admin/    301
-/*    /index.html    200
+/admin   /admin/   301
+/presentes   /index.html   200
+/presentes/   /index.html   200
+/dias/*   /dias/pendente.html   200
+/materiais/*   /materiais/pendente.html   200
+/presentes/*   /presentes/pendente.html   200
+/*   /index.html   200
