@@ -21,7 +21,7 @@
 #cs-install-modal p{margin:9px 0}#cs-install-modal ol{padding-left:22px;margin:12px 0}#cs-install-modal li{margin:9px 0}
 #cs-install-close{position:absolute;right:12px;top:9px;border:0;background:transparent;color:#173e2c;font-size:30px;cursor:pointer;line-height:1}
 #cs-install-native{width:100%;background:#164e38;color:#fff;border:0;border-radius:12px;padding:13px;font-weight:750;cursor:pointer;margin:10px 0}
-#cs-install-video{display:block;width:100%;max-height:240px;aspect-ratio:9/16;background:#0b1e17;border-radius:12px;object-fit:contain}
+#cs-install-video{display:block;width:min(100%,230px);aspect-ratio:370/817;height:auto;margin:0 auto;background:#0b1e17;border:0;border-radius:12px}
 .cs-install-video-label{margin:12px 0 7px!important;font-weight:750;color:#183b2c}
 #cs-install-gallery{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin:12px 0 7px}
 .cs-install-thumb{border:2px solid transparent;padding:0;border-radius:7px;overflow:hidden;background:#e8e4d9;cursor:pointer;aspect-ratio:9/16}
@@ -45,7 +45,7 @@
 <p>Abra pelo ícone na tela inicial, sem precisar procurar o link.</p>
 <div id="cs-install-steps"></div>
 <div id="cs-install-media-wrap" hidden>
-  <div id="cs-install-video-wrap"><p class="cs-install-video-label">▶ Veja o vídeo de instalação (iPhone)</p><video id="cs-install-video" controls playsinline preload="none" aria-label="Vídeo demonstrando como adicionar o Clube do Segredo à tela inicial no iPhone"><source src="/media/instalacao/tutorial-iphone.mp4" type="video/mp4">Seu navegador não suporta vídeo.</video></div>
+  <div id="cs-install-video-wrap"><p class="cs-install-video-label">▶ Veja o vídeo de instalação (iPhone)</p><iframe id="cs-install-video" title="Passo a passo PWA" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
   <div id="cs-install-gallery-wrap"><p class="cs-install-video-label">📷 Passo a passo com imagens</p><div id="cs-install-gallery" aria-label="Escolha uma imagem do passo a passo"></div>
   <figure id="cs-install-figure"><img id="cs-install-step-image" alt="Imagem do passo a passo da instalação" loading="lazy"><figcaption id="cs-install-step-caption"></figcaption></figure>
   <div class="cs-install-arrows"><button id="cs-install-prev" type="button">← Anterior</button><button id="cs-install-next" type="button">Próxima →</button></div></div>
@@ -55,7 +55,8 @@
 </section>`;
   document.body.append(toggle,overlay);
   const video=overlay.querySelector('#cs-install-video');
-  function close(){overlay.style.display='none';if(!video.paused) video.pause();}
+  const youtubeSrc='https://www.youtube.com/embed/WJZhYGfL4_w';
+  function close(){overlay.style.display='none';video.removeAttribute('src');}
   overlay.querySelector('#cs-install-close').addEventListener('click',close);
   overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
@@ -78,7 +79,7 @@
   let current=0;
   function setSlide(index){
     current=Math.max(0,Math.min(4,index));
-    big.src='/media/instalacao/iphone-passo-'+(current+1)+'.jpeg';
+    big.src='/media/instalacao/iphone-passo-'+(current+1)+'.webp';
     big.alt=captions[current];caption.textContent=captions[current];
     for(const btn of gallery.querySelectorAll('button')) btn.setAttribute('aria-pressed',String(Number(btn.dataset.index)===current));
     prev.disabled=current===0;next.disabled=current===4;
@@ -88,7 +89,7 @@
     galleryWrap.hidden=false;
     for(let i=0;i<5;i++){
       const btn=document.createElement('button');btn.type='button';btn.className='cs-install-thumb';btn.dataset.index=String(i);btn.setAttribute('aria-label','Ver passo '+(i+1));
-      const img=document.createElement('img');img.src='/media/instalacao/iphone-passo-'+(i+1)+'.jpeg';img.alt='Passo '+(i+1);img.loading='lazy';
+      const img=document.createElement('img');img.src='/media/instalacao/iphone-passo-'+(i+1)+'.webp';img.alt='Passo '+(i+1);img.loading='lazy';
       btn.append(img);btn.addEventListener('click',()=>setSlide(i));gallery.append(btn);
     }
     prev.addEventListener('click',()=>setSlide(current-1));next.addEventListener('click',()=>setSlide(current+1));
@@ -104,7 +105,7 @@
       install.hidden=!deferredInstall;
     }
   }
-  function show(){render();overlay.style.display='flex';}
+  function show(){render();overlay.style.display='flex';if(isIOS && !video.getAttribute('src')) video.src=youtubeSrc;}
   toggle.addEventListener('click',show);
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;if(overlay.style.display==='flex')render();});
   install.addEventListener('click',async()=>{if(!deferredInstall)return;const e=deferredInstall;deferredInstall=null;e.prompt();try{await e.userChoice;}catch(_){}close();});
