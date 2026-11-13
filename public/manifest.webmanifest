@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "Clube do Segredo — 21 Dias",
+  "short_name": "Clube do Segredo",
+  "description": "Acompanhe sua jornada de 21 dias e suas receitas.",
+  "lang": "pt-BR",
+  "start_url": "/?origem=instalado",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#16382a",
+  "theme_color": "#16382a",
+  "icons": [
+    {
+      "src": "/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

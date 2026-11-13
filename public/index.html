@@ -1,6 +1,8 @@
 <!DOCTYPE html><html lang="pt-BR"><head>
     <meta charset="utf-8">
     <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#16382A">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -8,18 +10,6 @@
     <meta name="apple-mobile-web-app-title" content="Clube do Segredo">
     <meta name="description" content="O Clube do Segredo te ajuda a continuar fazendo quando a rotina aperta.">
     <title>Clube do Segredo | Acesso de compradores</title>
-    <script>
-      try {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function (rs) {
-            rs.forEach(function (r) { r.unregister(); })
-          })
-        }
-        if (window.caches && caches.keys) {
-          caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k) }) })
-        }
-      } catch (e) {}
-    </script>
     <!-- Otimização de carregamento do player VTurb (VSL upsell) -->
     <script>!function(i,n){i._plt=i._plt||(n&&n.timeOrigin?n.timeOrigin+n.now():Date.now())}(window,performance);</script>
     <link rel="dns-prefetch" href="https://cdn.converteai.net">
@@ -29,6 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&amp;family=Cormorant+Garamond:wght@500;600;700&amp;family=Poppins:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
+    <script>if(/^\/clube\/?$/.test(location.pathname)) location.replace("https://insulina21d.vercel.app/oferta"+location.search+location.hash);</script>
     <script src="/js/config.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', function () {
@@ -52,4 +43,6 @@
     <div id="root"></div>
   
 
-</body></html>
+<script defer src="/js/pwa-install.js?v=nov13"></script>
+<script defer src="/js/password-reset-notice.js?v=nov13"></script>
+<script defer src="/js/jornada-21-dias.js?v=nov13b"></script></body></html>
