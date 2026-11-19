@@ -6,7 +6,6 @@
   const isMobile=isIOS||isAndroid;
   const isStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
   let deferredInstall=null;
-  let shownThisSession=false;
   if('serviceWorker' in navigator && (location.protocol==='https:'||['localhost','127.0.0.1'].includes(location.hostname))) {
     addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{}));
   }
@@ -110,13 +109,9 @@
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;if(overlay.style.display==='flex')render();});
   install.addEventListener('click',async()=>{if(!deferredInstall)return;const e=deferredInstall;deferredInstall=null;e.prompt();try{await e.userChoice;}catch(_){}close();});
   window.addEventListener('appinstalled',()=>{toggle.remove();close();});
-  window.addEventListener('clube:authenticated',event=>{
+  // O tutorial nao abre automaticamente apos o login.
+  // O comprador pode consultar o passo a passo somente quando quiser, pelo botao.
+  window.addEventListener('clube:authenticated',()=>{
     toggle.style.display='block';
-    if(shownThisSession)return;
-    shownThisSession=true;
-    const userId=event.detail&&event.detail.id||'user';
-    const key='clube:pwa-guide-shown:'+userId;
-    try{if(localStorage.getItem(key))return;localStorage.setItem(key,'1');}catch(_){}
-    show();
   });
 })();

@@ -14,3 +14,15 @@
 .buyer-fill{display:block;height:100%;background:#247654;border-radius:99px;min-width:0}.buyer-fill.is-unknown{background:#a6b5ad}.buyer-fill.is-age{background:#b39149}
 .buyer-note{margin:16px 0 0}.detail-demographics{border-radius:10px;background:#f3f7f3;padding:13px 15px;margin-bottom:20px;font-size:13px;color:#476353}
 @media(max-width:700px){.buyer-panels{grid-template-columns:1fr}.buyer-metrics{gap:6px}.buyer-metrics>div{padding:11px 9px}.buyer-metrics strong{font-size:19px}.buyer-analytics{padding:15px}.buyer-analytics-head{flex-wrap:wrap}.buyer-analytics-head h2{font-size:22px}}
+
+/* Painel de atividade, responsivo e com dados reais */
+.app-activity-analytics{margin:24px 0 28px;background:white;border:1px solid var(--line);border-radius:17px;padding:22px}
+.app-activity-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:16px 0}
+.app-activity-metrics>div{padding:16px 12px;background:#f3f9f5;border:1px solid var(--line);border-radius:12px;min-width:0}
+.app-activity-metrics small{display:block;color:var(--muted);font-size:12px;line-height:1.35;min-height:34px}
+.app-activity-metrics strong{display:block;font-size:26px;color:#144a36;font-variant-numeric:tabular-nums;line-height:1.4}
+.metric-sub{display:block;color:#63786e;font-size:12px;margin-top:3px}
+.app-activity-disclaimer{font-size:12px;color:#62766b;line-height:1.55;margin:7px 0 0}
+.pill.online{background:#e0f3e9;color:#266a47}
+@media(max-width:950px){.app-activity-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.app-activity-analytics{padding:15px}.app-activity-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.app-activity-metrics small{min-height:0}.app-activity-metrics strong{font-size:23px}.app-activity-metrics>div:last-child{grid-column:span 2}}
