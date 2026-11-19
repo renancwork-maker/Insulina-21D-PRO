@@ -16,6 +16,29 @@ async function api(path,options={}){
  if(!r.ok)throw Error(body.error||`Erro HTTP ${r.status}`);
  return body;
 }
+function percent(part,total){return total>0?(100*part/total):0;}
+const deviceLabel={ios:'iOS / iPhone',android:'Android',desktop:'PC / Notebook',other:'Outros',unknown:'Não informado'};
+function renderBars(container,entries,denominator,kind){
+ const wrap=el(container);wrap.replaceChildren();
+ for(const [key,count] of entries){
+  const total=Number(count)||0,pct=percent(total,denominator);
+  const item=node('div');const top=node('div','','buyer-bar-top');
+  top.append(node('span',kind==='device'?deviceLabel[key]||key:key),node('strong',`${pct.toFixed(1).replace('.',',')}% · ${total}`));
+  const track=node('div','','buyer-track'),bar=node('span','','buyer-fill'+(key==='unknown'?' is-unknown':'')+(kind==='age'?' is-age':''));bar.style.width=pct+'%';
+  track.append(bar);item.append(top,track);wrap.append(item);
+ }
+}
+async function loadDemographics(){
+ try{
+  const {statistics}=await api('?view=demographics');
+  const d=statistics||{},n=Number(d.total)||0,a=Number(d.age_reported)||0,dev=d.device||{},age=d.age||{};
+  el('buyers-total').textContent=n;el('buyers-age-informed').textContent=`${a} (${percent(a,n).toFixed(1).replace('.',',')}%)`;
+  const identified=Math.max(0,n-(Number(dev.unknown)||0));el('buyers-device-informed').textContent=`${identified} (${percent(identified,n).toFixed(1).replace('.',',')}%)`;
+  renderBars('device-bars',['ios','android','desktop','other','unknown'].map(k=>[k,dev[k]||0]),n,'device');
+  renderBars('age-bars',['18-24','25-34','35-44','45-54','55-64','65+'].map(k=>[k,age[k]||0]),a,'age');
+  el('analytics-note').textContent=`Base: ${n} comprador(es) com pagamento aprovado. ${Math.max(0,n-a)} ainda não informaram a idade. O dispositivo representa o primeiro acesso ao aplicativo, não o sistema usado no checkout.`;
+ }catch(e){el('analytics-note').textContent='Não foi possível carregar os indicadores. Execute o SQL 06_PERFIL_COMPRADORES.sql e confira os logs de admin-users. '+e.message;}
+}
 function logout(show=true){S.token=null;S.selected=null;sessionStorage.removeItem('clube-admin-token');el('dashboard').hidden=true;el('account').hidden=true;el('login-view').hidden=false;el('detail').hidden=true;if(show)alertUser('Você saiu do painel.','success');}
 async function login(event){event.preventDefault();clearAlert();let button=el('login-button');button.disabled=true;
  try{
@@ -26,7 +49,7 @@ async function login(event){event.preventDefault();clearAlert();let button=el('l
   sessionStorage.setItem('clube-admin-token',S.token);
   el('password').value='';el('login-view').hidden=true;el('dashboard').hidden=false;el('account').hidden=false;el('admin-email').textContent=el('email').value.trim();await load();
  }catch(e){S.token=null;sessionStorage.removeItem('clube-admin-token');alertUser(e.message);}finally{button.disabled=false;}}
-async function load(){clearAlert();const tb=el('customer-rows');tb.replaceChildren(node('tr',''));
+async function load(){clearAlert();loadDemographics();const tb=el('customer-rows');tb.replaceChildren(node('tr',''));
  try{const data=await api(`?page=${S.page}&search=${encodeURIComponent(S.search)}`);S.total=data.total;el('total').textContent=data.total;el('visible').textContent=data.users.length;el('current-page').textContent=S.page;el('page-label').textContent=`Página ${S.page} de ${Math.max(1,Math.ceil(S.total/50))}`;el('prev').disabled=S.page<=1;el('next').disabled=S.page*50>=S.total;
  tb.replaceChildren();if(!data.users.length){const tr=node('tr');const col=td('Nenhum cliente encontrado.');col.colSpan=5;tr.append(col);tb.append(tr);}else for(const u of data.users){const tr=node('tr');const first=node('td');first.append(node('strong',u.name||'Sem nome'),node('small',u.email));tr.append(first);
  const p=node('td');p.append(node('span',planName(u.plan),'pill '+(u.plan||'')));tr.append(p);
@@ -35,6 +58,7 @@ async function load(){clearAlert();const tb=el('customer-rows');tb.replaceChildr
  catch(e){alertUser(e.message);}}
 async function openDetail(id){clearAlert();try{const d=await api('?user='+encodeURIComponent(id));S.selected=d.user;const u=d.user;el('detail').hidden=false;el('detail-title').textContent=u.name||'Sem nome';el('detail-email').textContent=u.email;
  el('detail-status').textContent=`Plano atual: ${planName(u.plan)} · Acesso: ${u.active?'Liberado':'Bloqueado'} · Controle: ${u.admin_premium_override===null?'Automático (Wiapy)':u.admin_premium_override?'VIP manual':'VIP desativado manualmente'}`;
+ const dem=d.demographics;el('detail-demographics').textContent='Primeiro acesso: '+(dem?.first_app_os?deviceLabel[dem.first_app_os]||dem.first_app_os:'Não identificado')+' · Idade: '+(dem?.age?dem.age+' anos':dem?.age_skipped?'Preferiu não informar':'Não informada');
  const orders=el('orders');orders.replaceChildren();if(!d.orders.length){const tr=node('tr'),c=td('Sem compras registradas.');c.colSpan=5;tr.append(c);orders.append(tr);}else for(const x of d.orders){const tr=node('tr');for(const val of [safeDate(x.created_at),planName(x.tier),money(x.amount_cents),x.status,x.payment_id])tr.append(td(val));orders.append(tr);}
  const activity=el('activity');activity.replaceChildren();if(!d.activity.length)activity.append(node('div','Nenhum evento de atividade registrado.'));else for(const x of d.activity)activity.append(node('div',`${safeDate(x.created_at)} — ${x.evento||'Evento'}`));
  el('detail').scrollIntoView({behavior:'smooth',block:'start'});
@@ -44,6 +68,7 @@ async function premium(override){if(!S.selected)return;const name=S.selected.ema
 async function reset(){if(!S.selected)return;if(!confirm(`Enviar e-mail de recuperação de senha para ${S.selected.email}?`))return;
  try{await api('',{method:'POST',body:JSON.stringify({action:'reset',userId:S.selected.id})});alertUser('Solicitação enviada ao Supabase. Confira o e-mail do comprador.','success');}catch(e){alertUser(e.message);}}
 window.addEventListener('DOMContentLoaded',async()=>{
+ el('analytics-reload').onclick=loadDemographics;
  el('login-form').onsubmit=login;el('logout').onclick=()=>logout();el('reload').onclick=()=>load();el('close-detail').onclick=()=>{el('detail').hidden=true;S.selected=null;};
  el('search-form').onsubmit=e=>{e.preventDefault();S.page=1;S.search=el('search').value.trim();load();};el('prev').onclick=()=>{if(S.page>1){S.page--;load();}};el('next').onclick=()=>{if(S.page*50<S.total){S.page++;load();}};
  el('enable-vip').onclick=()=>premium(true);el('disable-vip').onclick=()=>premium(false);el('auto-vip').onclick=()=>premium(null);el('reset-password').onclick=reset;

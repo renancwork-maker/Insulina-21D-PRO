@@ -21,17 +21,23 @@ export default async function handler(request) {
 
     if (request.method === 'GET') {
       const url = new URL(request.url);
+      if (url.searchParams.get('view') === 'demographics') {
+        const { data, error } = await supabase.rpc('clube_admin_buyer_demographics');
+        if (error) throw error;
+        return answer({ statistics: data });
+      }
       const detail = url.searchParams.get('user');
       if (detail) {
         if (!validUUID(detail)) return answer({error:'invalid_user_id'},400);
         const {data:p,error:pe} = await supabase.from('profiles').select('id,email,name,plan,active,created_at,purchase_date,admin_premium_override').eq('id',detail).single();
         if (pe || !p) return answer({error:'user_not_found'},404);
-        const [orders,activity] = await Promise.all([
+        const [orders,activity,demographics] = await Promise.all([
           supabase.from('wiapy_transactions').select('payment_id,tier,status,amount_cents,created_at,updated_at').eq('user_id',detail).order('created_at',{ascending:false}).limit(100),
           supabase.from('acessos').select('evento,created_at').eq('user_id',detail).order('created_at',{ascending:false}).limit(30),
+          supabase.from('customer_demographics').select('age,age_skipped,first_app_os,first_app_seen_at').eq('user_id',detail).maybeSingle(),
         ]);
-        if (orders.error || activity.error) throw orders.error || activity.error;
-        return answer({user:p,orders:orders.data||[],activity:activity.data||[]});
+        if (orders.error || activity.error || demographics.error) throw orders.error || activity.error || demographics.error;
+        return answer({user:p,orders:orders.data||[],activity:activity.data||[],demographics:demographics.data||null});
       }
       const page = Math.max(1,Math.min(10000,Number(url.searchParams.get('page'))||1));
       const term = normalize(url.searchParams.get('search')).slice(0,100).replace(/[,()%]/g,'');
