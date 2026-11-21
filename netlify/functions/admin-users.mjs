@@ -1,4 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
+import {randomUUID} from 'node:crypto';
+import {createPasswordSetupLink,getAppUrl,sendResendEmail,retireLegacySharedPassword} from './password-invites.mjs';
+import {buildPasswordResetEmail} from './email-templates.mjs';
 
 const answer = (json, status=200) => Response.json(json, { status, headers: {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'} });
 const validUUID = s => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s || '');
@@ -78,10 +81,15 @@ export default async function handler(request) {
     if (body.action === 'reset') {
       const {data:p,error:pe} = await supabase.from('profiles').select('email').eq('id',body.userId).single();
       if (pe || !p?.email) return answer({error:'user_not_found'},404);
-      const appUrl = String(process.env.APP_URL || '').replace(/\/$/,'');
-      if (!/^https:\/\/[a-z0-9.-]+(?::\d+)?$/i.test(appUrl)) return answer({error:'APP_URL_not_configured'},503);
-      const {error} = await supabase.auth.resetPasswordForEmail(p.email,{redirectTo: `${appUrl}/recuperar`});
-      if (error) throw error;
+      const appUrl=getAppUrl();
+      const {data:authRecord,error:authRecordError}=await supabase.auth.admin.getUserById(body.userId);
+      if(authRecordError||!authRecord?.user)return answer({error:'user_not_found'},404);
+      await retireLegacySharedPassword(supabase,authRecord.user);
+      const setupUrl=await createPasswordSetupLink(supabase,p.email,appUrl);
+      await sendResendEmail({to:p.email,
+        emailMessage:buildPasswordResetEmail({email:p.email,setupUrl}),
+        idempotencyKey:`admin-recuperar-${body.userId}-${randomUUID()}`,
+      });
       await supabase.from('admin_audit_log').insert({admin_user_id:auth.user.id,target_user_id:body.userId,event:'password_reset_requested'});
       return answer({ok:true});
     }

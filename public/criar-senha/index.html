@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#143d30">
+  <title>Criar minha senha | Clube do Segredo</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:radial-gradient(circle at 12% 9%,#36644b 0,#153e30 52%,#0f3025 100%);display:flex;align-items:center;justify-content:center;padding:24px 14px;color:#153a2c}
+    .card{width:100%;max-width:440px;border-radius:26px;background:#fffdf8;box-shadow:0 22px 65px #061f165c;padding:28px 25px 30px;border:1px solid #e3d6b3}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}.brand img{width:52px;height:52px;object-fit:contain;border-radius:50%;background:#204b38}.brand strong{font-size:15px;letter-spacing:.2px}.eyebrow{color:#93722d;text-transform:uppercase;letter-spacing:2px;font-size:11px;font-weight:800;margin:0 0 9px}
+    h1{font-size:clamp(24px,5vw,28px);line-height:1.2;margin:0 0 12px;color:#153a2c}p{color:#65756d;font-size:14px;line-height:1.55;margin:0 0 22px}
+    label{display:block;font-size:13px;font-weight:700;margin:14px 0 7px;color:#274e3a}input{display:block;width:100%;height:49px;padding:0 14px;border-radius:10px;border:1px solid #cbd7ce;background:#fff;font:inherit;font-size:16px;color:#153a2c}input:focus{outline:2px solid #bd9949;outline-offset:1px}
+    button.primary{width:100%;padding:15px;margin-top:22px;background:#176344;border:0;border-radius:12px;color:white;font-size:16px;font-weight:800;cursor:pointer}button.primary:disabled{background:#889e8f;cursor:wait}
+    a{color:#146b49;text-decoration:underline;text-underline-offset:3px;font-weight:650}.status{border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5;margin:14px 0}.error{background:#fff1eb;color:#8c2d1d}.success{background:#e8f6ef;color:#145237}
+    .footer{margin-top:22px;font-size:13px;text-align:center;color:#708075}.muted{font-size:12px;margin-top:12px;color:#718075}.hidden{display:none!important}
+  </style>
+  <script defer src="/js/config.js"></script>
+  <script defer src="/js/criar-senha.js?v=1"></script>
+</head>
+<body>
+  <main class="card">
+    <div class="brand"><img src="/images/icon-192.png" alt="Clube do Segredo"><strong>Clube do Segredo</strong></div>
+    <p class="eyebrow">Seu primeiro acesso</p>
+    <h1 id="title">Crie sua senha pessoal</h1>
+    <p id="intro">Seu acesso já foi liberado. Escolha uma senha para entrar no aplicativo e começar sua rotina de 21 dias.</p>
+    <div id="feedback" class="status hidden" role="status" aria-live="polite"></div>
+    <form id="password-form" novalidate>
+      <label for="password">Nova senha</label>
+      <input id="password" type="password" autocomplete="new-password" placeholder="Pelo menos 10 caracteres" minlength="10" required>
+      <label for="confirm-password">Confirme sua senha</label>
+      <input id="confirm-password" type="password" autocomplete="new-password" placeholder="Repita a senha" minlength="10" required>
+      <button class="primary" id="submit" type="submit">Criar senha e continuar</button>
+      <div class="muted">Sua senha é pessoal. Não a compartilhe com ninguém.</div>
+    </form>
+    <div id="success" class="hidden"><p>Sua senha foi criada com sucesso. Agora entre no aplicativo com seu e-mail e a nova senha.</p><a href="/">Ir para o login do aplicativo</a></div>
+    <div class="footer"><a href="/">Voltar ao aplicativo</a></div>
+  </main>
+</body>
+</html>

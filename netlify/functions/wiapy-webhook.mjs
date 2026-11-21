@@ -1,6 +1,7 @@
-import { timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual, randomBytes, randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { buildEmail } from './email-templates.mjs';
+import { createPasswordSetupLink, retireLegacySharedPassword } from './password-invites.mjs';
 
 const response = (payload, status = 200) => Response.json(payload, { status, headers: { 'Cache-Control': 'no-store' } });
 const secureEqual = (a, b) => {
@@ -32,8 +33,10 @@ async function getOrCreateUser(admin, email, name) {
     if ((data?.users?.length || 0) < 1000) break;
   }
   const { data, error } = await admin.auth.admin.createUser({
-    email, password: process.env.INITIAL_ACCESS_PASSWORD, email_confirm: true,
-    user_metadata: { name: name || email.split('@')[0], must_change_password: true, source: 'wiapy' },
+    // Nunca usar senha compartilhada: cada conta recebe uma senha aleatoria impossivel de prever.
+    // O comprador definira sua propria senha por um link de uso unico no Resend.
+    email, password: randomBytes(48).toString('base64url'), email_confirm: true,
+    user_metadata: { name: name || email.split('@')[0], must_change_password: true, source: 'wiapy', password_setup_flow: 'email_link_v2' },
   });
   if (error) {
     if (!/already|registered|exists/i.test(error.message || '')) throw error;
@@ -56,7 +59,7 @@ async function updatePurchase(admin, order) {
   return data;
 }
 
-async function sendPurchaseEmail(admin, paymentId, tier, name, email) {
+async function sendPurchaseEmail(admin, paymentId, tier, name, email, userId) {
   // Reserva a notificação no banco para impedir envios concorrentes.
   const { data: canSend, error: claimError } = await admin.rpc('wiapy_claim_email', { p_payment_id: paymentId });
   if (claimError) throw claimError;
@@ -64,10 +67,16 @@ async function sendPurchaseEmail(admin, paymentId, tier, name, email) {
   try {
     const appUrl = (process.env.APP_URL || '').replace(/\/$/, '');
     if (!/^https:\/\//.test(appUrl)) throw new Error('invalid_APP_URL');
-    const { subject, html, text } = buildEmail({ tier, name, email, appUrl, initialPassword: process.env.INITIAL_ACCESS_PASSWORD });
+    // Upgrade de quem ja definiu a propria senha nao deve redefini-la.
+    const { data: found, error: findError } = await admin.auth.admin.getUserById(userId);
+    if (findError || !found?.user) throw new Error('auth_user_missing_for_email');
+    const needsSetup = found.user.user_metadata?.must_change_password === true;
+    if(needsSetup) await retireLegacySharedPassword(admin,found.user);
+    const setupUrl = needsSetup ? await createPasswordSetupLink(admin, email, appUrl) : null;
+    const { subject, html, text } = buildEmail({ tier, name, email, appUrl, setupUrl });
     const apiResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type':'application/json', 'Idempotency-Key':`wiapy-${paymentId}` },
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type':'application/json', 'Idempotency-Key':`wiapy-${paymentId}-${randomUUID()}` },
       body: JSON.stringify({ from: process.env.RESEND_FROM_EMAIL, to: [email], subject, html, text }),
     });
     if (!apiResponse.ok) throw new Error(`resend_http_${apiResponse.status}`);
@@ -84,8 +93,8 @@ async function sendPurchaseEmail(admin, paymentId, tier, name, email) {
 export default async function handler(request) {
   if (request.method !== 'POST') return response({ ok:false, error:'method_not_allowed' },405);
   if (!secureEqual(request.headers.get('authorization'), process.env.WIAPY_WEBHOOK_TOKEN)) return response({ok:false,error:'not_authorized'},401);
-  const required = ['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','WIAPY_BASIC_CHECKOUT_ID','WIAPY_PREMIUM_CHECKOUT_ID','INITIAL_ACCESS_PASSWORD','RESEND_API_KEY','RESEND_FROM_EMAIL','APP_URL'];
-  if (required.some(k => !process.env[k]) || process.env.INITIAL_ACCESS_PASSWORD.length < 10) return response({ok:false,error:'not_configured'},503);
+  const required = ['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','WIAPY_BASIC_CHECKOUT_ID','WIAPY_PREMIUM_CHECKOUT_ID','RESEND_API_KEY','RESEND_FROM_EMAIL','APP_URL'];
+  if (required.some(k => !process.env[k])) return response({ok:false,error:'not_configured'},503);
   let body;
   try { body = await request.json(); } catch { return response({ok:false,error:'invalid_json'},400); }
   const checkoutId = String(body?.checkout?.id || '');
@@ -112,7 +121,7 @@ export default async function handler(request) {
     const userId = await getOrCreateUser(admin,email,name);
     const applied = await updatePurchase(admin,{ paymentId, checkoutId, amount, email, name, tier, userId, status });
     if (applied === 'refunded') return response({ok:true,ignored:'previous_refund'});
-    const mail = await sendPurchaseEmail(admin,paymentId,tier,name,email);
+    const mail = await sendPurchaseEmail(admin,paymentId,tier,name,email,userId);
     return response({ok:true,action:'purchase_processed',tier,email_status:mail});
   } catch (error) {
     console.error('Wiapy webhook failed:',String(error?.code || error?.message || 'server_error').slice(0,80));

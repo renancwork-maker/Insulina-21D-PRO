@@ -1,18 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildNoLoginReminderEmail } from './email-templates.mjs';
+import {createPasswordSetupLink, getAppUrl, retireLegacySharedPassword} from './password-invites.mjs';
 
 // Agendamento em UTC: toda hora cheia. Executa somente em producao na Netlify.
 export const config = { schedule: '0 * * * *' };
 
 const required = [
   'SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','APP_URL',
-  'RESEND_API_KEY','RESEND_FROM_EMAIL','INITIAL_ACCESS_PASSWORD',
+  'RESEND_API_KEY','RESEND_FROM_EMAIL',
 ];
 
 function isValidConfig() {
   if (required.some(k => !process.env[k])) return false;
   if (!/^https:\/\/[a-z0-9.-]+(?::\d+)?(?:\/.*)?$/i.test(process.env.APP_URL)) return false;
-  if (process.env.INITIAL_ACCESS_PASSWORD.length < 10) return false;
   return true;
 }
 
@@ -45,7 +45,10 @@ export default async function handler() {
       const user=auth?.user;
       if(authError||!user)throw new Error('auth_lookup_failed');
       const email=String(user.email||'').trim().toLowerCase();
-      if(user.last_sign_in_at || email!==job.out_email) {
+      const meta=user.user_metadata||{};
+      // No fluxo por link, verificar o token do e-mail conta como sign-in no Auth,
+      // mas nao equivale a abrir o app. A atividade real sera checada abaixo.
+      if(email!==job.out_email || (user.last_sign_in_at && meta.password_setup_flow!=='email_link_v2')) {
         await finish('suppressed');results.skipped++;continue;
       }
       const [activity,legacy] = await Promise.all([
@@ -56,14 +59,13 @@ export default async function handler() {
       if((activity.data||[]).length||(legacy.data||[]).length) {
         await finish('suppressed');results.skipped++;continue;
       }
-      // Contas preexistentes podem ter senha alterada: nunca apresentar
-      // a senha compartilhada como se fosse a senha pessoal atual.
-      const meta=user.user_metadata||{};
-      const canShowTemporary=meta.source==='wiapy' && meta.must_change_password===true;
+      // Desativa a senha global legada apenas se a conta ainda nao criou senha pessoal.
+      await retireLegacySharedPassword(admin,user);
+      const appUrl=getAppUrl();
+      const setupUrl=meta.must_change_password===true
+        ? await createPasswordSetupLink(admin,email,appUrl) : null;
       const emailContent=buildNoLoginReminderEmail({
-        name:job.out_name,email,
-        appUrl:process.env.APP_URL.replace(/\/$/,''),
-        temporaryPassword:canShowTemporary?process.env.INITIAL_ACCESS_PASSWORD:null,
+        name:job.out_name,email,appUrl,setupUrl,
       });
       // A chave evita duplicatas em reexecucoes/respostas interrompidas.
       const response=await fetch('https://api.resend.com/emails',{
@@ -71,7 +73,7 @@ export default async function handler() {
         headers:{
           Authorization:`Bearer ${process.env.RESEND_API_KEY}`,
           'Content-Type':'application/json',
-          'Idempotency-Key':`clube-primeiro-acesso-48h-${id}`,
+          'Idempotency-Key':`clube-primeiro-acesso-48h-${id}-${attempt}`,
         },
         body:JSON.stringify({
           from:process.env.RESEND_FROM_EMAIL,to:[email],

@@ -3,7 +3,7 @@
 /js/config.js
   Cache-Control: public, max-age=0, must-revalidate
 /js/index-app-dia1a21-v3.js
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=0, must-revalidate
 /css/index--cjF3lhQ.css
   Cache-Control: public, max-age=31536000, immutable
 /images/*
@@ -17,3 +17,10 @@
 
 /media/instalacao/*
   Cache-Control: public, max-age=604800
+
+/criar-senha/*
+  Cache-Control: no-store
+  Referrer-Policy: no-referrer
+  X-Robots-Tag: noindex, nofollow
+/js/criar-senha.js
+  Cache-Control: no-store
