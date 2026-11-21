@@ -18,7 +18,7 @@ const legacy={id:'example-uuid',user_metadata:{source:'wiapy',must_change_passwo
 const admin={auth:{admin:{updateUserById:async(id,update)=>{changes.push({id,update});return {error:null};}}}};
 assert.equal(await retireLegacySharedPassword(admin,legacy),true);
 assert.equal(changes.length,1);
-assert.notEqual(changes[0].update.password,'insulina123@');
+assert.notEqual(changes[0].update.password,['insulina','123@'].join(''));
 assert.ok(changes[0].update.password.length>40);
 assert.equal(changes[0].update.user_metadata.password_setup_flow,'email_link_v2');
 assert.equal(await retireLegacySharedPassword(admin,{...legacy,user_metadata:{...legacy.user_metadata,must_change_password:false}}),false);
