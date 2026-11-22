@@ -1,45 +1,49 @@
+// Mensagens exclusivamente transacionais. Nao incluir senha, pixels ou links rastreados.
+// A autenticacao SPF/DKIM/DMARC depende dos registros DNS do remetente na Resend.
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const firstName = value => String(value || '').trim().split(/\s+/)[0] || 'tudo bem';
+const firstName = value => String(value || '').trim().split(/\s+/)[0] || 'cliente';
+const APP_NAME = 'Segredo da Insulina - 21 Dias';
+const SUPPORT_PHONE = '(11) 93238-3351';
 
-function layout(title, body) {
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:24px 12px;background:#f5f3eb;color:#173d2f;font-family:Arial,Helvetica,sans-serif"><div style="margin:auto;max-width:540px;padding:28px;background:#fff;border-radius:18px"><p style="font-size:12px;letter-spacing:1.8px;color:#ae8137;font-weight:700">CLUBE DO SEGREDO</p><h1 style="font-size:23px;line-height:1.25">${escapeHTML(title)}</h1>${body}<hr style="border:0;border-top:1px solid #e6e8df;margin:24px 0"><p style="font-size:13px;color:#6d746f">Equipe Clube do Segredo</p></div></body></html>`;
+function layout(title, content) {
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f7f8f6;padding:18px 10px;font-family:Arial,Helvetica,sans-serif;color:#243b32"><main style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e5e9e5;border-radius:10px;padding:24px"><p style="font-size:13px;font-weight:bold;color:#296349">${APP_NAME}</p><h1 style="font-size:22px;line-height:1.3;margin:20px 0">${escapeHTML(title)}</h1>${content}<hr style="border:0;border-top:1px solid #e5e9e5;margin:24px 0"><p style="font-size:13px;color:#59675f">Precisa de ajuda? Suporte: ${SUPPORT_PHONE}</p><p style="font-size:13px;color:#59675f">Equipe Clube do Segredo</p></main></body></html>`;
 }
-const button = (url, label) => `<p style="text-align:center;margin:26px 0"><a href="${escapeHTML(url)}" style="display:inline-block;background:#1b5e43;color:#fff;padding:15px 24px;border-radius:9px;text-decoration:none;font-size:16px;font-weight:bold">${escapeHTML(label)}</a></p>`;
+function cta(url,label) {
+  return `<p style="margin:22px 0"><a href="${escapeHTML(url)}" style="display:inline-block;background:#20583e;color:white;text-decoration:none;padding:14px 18px;border-radius:7px;font-size:16px;font-weight:bold">${escapeHTML(label)}</a></p>`;
+}
+const loginLabel = email => `<p><strong>E-mail de acesso:</strong> ${escapeHTML(email)}</p>`;
+const footerText = `Se precisar de ajuda, entre em contato pelo telefone ${SUPPORT_PHONE}.\nEquipe Clube do Segredo`;
 
-/** E-mail transacional após pagamento. NUNCA expõe senha, mesmo em um upgrade. */
+/** Compra aprovada ou upgrade. Link individual quando a conta exige definicao de senha. */
 export function buildEmail({tier,name,email,appUrl,setupUrl=null}) {
-  const vip=tier==='premium';
-  const title=vip?'Seu Plano VIP está liberado!':'Seu acesso ao Segredo da Insulina está liberado!';
-  const intro=vip
-    ?'Seu upgrade foi aprovado e seu Plano VIP já está disponível no aplicativo.'
-    :'Seu pagamento foi aprovado! Preparamos suas receitas e sua rotina para os próximos 21 dias.';
-  const greeting=`Olá, ${firstName(name)}!`;
-  const instructions=setupUrl
-    ?'Toque no botão abaixo e crie uma senha pessoal. Depois, entre no aplicativo com seu e-mail e a senha que você escolheu.'
-    :'Seu acesso já está liberado. Entre com seu e-mail e a senha pessoal que você já criou. Caso tenha esquecido, use “Esqueci minha senha” na tela de login.';
-  const link=setupUrl||appUrl;
-  const subject=title;
-  const text=`${greeting}\n\n${intro}\n\n${instructions}\n\nE-mail para login: ${email}\n\n${setupUrl?'CRIE SUA SENHA':'ACESSE O APLICATIVO'}: ${link}\n\n${setupUrl?'O link é individual, válido por tempo limitado e pode ser utilizado uma vez. Nunca compartilhe esse link.\n\n':''}Equipe Clube do Segredo`;
-  const html=layout(title,`<p>${escapeHTML(greeting)}</p><p>${escapeHTML(intro)}</p><p>${escapeHTML(instructions)}</p><div style="background:#f6f3eb;padding:14px 18px;border-radius:10px"><strong>E-mail de acesso:</strong> ${escapeHTML(email)}</div>${button(link,setupUrl?'CRIAR MINHA SENHA':'ABRIR O APLICATIVO')}${setupUrl?'<p style="font-size:13px;color:#5b665f">Este link é individual, de uso único e expira automaticamente. Se ele expirar, toque em “Esqueci minha senha” no aplicativo para solicitar outro.</p>':''}<p style="font-size:13px;color:#5b665f">Se precisar de ajuda, utilize nosso canal de suporte.</p>`);
+  const premium = tier === 'premium';
+  const subject = setupUrl ? 'Crie sua senha para acessar o Segredo da Insulina' : (premium ? 'Seu acesso VIP ao Segredo da Insulina' : 'Seu acesso ao Segredo da Insulina');
+  const greeting = `Olá, ${firstName(name)}!`;
+  const intro = premium ? 'Seu pagamento foi confirmado e seu plano VIP está disponível no aplicativo.' : 'Seu pagamento foi confirmado. Seu conteúdo de 21 dias está disponível no aplicativo.';
+  const instruction = setupUrl ? 'Para começar, use o botão abaixo para criar sua senha pessoal. Depois, acesse o aplicativo com seu e-mail e a senha escolhida.' : 'Para entrar, utilize o e-mail da compra e sua senha pessoal. Se não lembrar da senha, use a opção Esqueci minha senha na tela de login.';
+  const label = setupUrl ? 'Criar minha senha' : 'Acessar aplicativo';
+  const link = setupUrl || appUrl;
+  const text = `${greeting}\n\n${intro}\n\n${instruction}\n\nE-mail de acesso: ${email}\n\n${label}: ${link}\n\n${setupUrl?'Este link é individual e expira. Se necessário, solicite outro em Esqueci minha senha.\n\n':''}${footerText}`;
+  const html = layout('Seu acesso está disponível', `<p>${escapeHTML(greeting)}</p><p>${escapeHTML(intro)}</p><p>${escapeHTML(instruction)}</p>${loginLabel(email)}${cta(link,label)}${setupUrl?'<p style="font-size:13px">O link é individual e expira. Se necessário, solicite outro em Esqueci minha senha.</p>':''}`);
   return {subject,text,html};
 }
 
 export function buildNoLoginReminderEmail({name,email,appUrl,setupUrl}) {
-  const subject='Sua rotina de 21 dias está pronta — vamos começar? 💚';
-  const intro='Nós preparamos tudo para você no aplicativo: suas receitas, orientações e uma rotina organizada para os seus 21 dias.';
-  const action=setupUrl
-    ?'Vimos que você ainda não entrou. Toque no botão para criar sua senha pessoal e começar.'
-    :'Vimos que você ainda não entrou. Abra o aplicativo com a senha pessoal que você definiu.';
+  const subject='Seu acesso ao Segredo da Insulina está disponível';
+  const greeting=`Olá, ${firstName(name)}!`;
+  const intro='Sua rotina e suas receitas dos 21 dias já estão disponíveis no aplicativo. Percebemos que você ainda não entrou.';
+  const instruction=setupUrl?'Crie sua senha pessoal usando o link abaixo para começar.':'Entre com o e-mail da compra e sua senha pessoal. Se necessário, solicite uma nova senha na tela de login.';
   const link=setupUrl||appUrl;
-  const text=`Olá, ${firstName(name)}!\n\n${intro}\n\n${action}\n\nE-mail de acesso: ${email}\n${setupUrl?'Criar senha':'Entrar no aplicativo'}: ${link}\n\nSe você já acessou, desconsidere este lembrete.\n\nEquipe Clube do Segredo`;
-  const html=layout('Sua rotina de 21 dias está pronta 💚',`<p>Olá, ${escapeHTML(firstName(name))}!</p><p>${escapeHTML(intro)}</p><p>${escapeHTML(action)}</p><div style="background:#f6f3eb;padding:14px 18px;border-radius:10px"><strong>E-mail de acesso:</strong> ${escapeHTML(email)}</div>${button(link,setupUrl?'CRIAR MINHA SENHA':'ACESSAR MEU APLICATIVO')}<p style="font-size:13px;color:#5b665f">Se o link expirar, você pode solicitar outro em “Esqueci minha senha”. Se já acessou, desconsidere esta mensagem.</p>`);
+  const label=setupUrl?'Criar minha senha':'Acessar aplicativo';
+  const text=`${greeting}\n\n${intro}\n\n${instruction}\n\nE-mail de acesso: ${email}\n\n${label}: ${link}\n\nSe você já acessou o aplicativo, pode desconsiderar esta mensagem.\n\n${footerText}`;
+  const html=layout('Seu acesso está disponível',`<p>${escapeHTML(greeting)}</p><p>${escapeHTML(intro)}</p><p>${escapeHTML(instruction)}</p>${loginLabel(email)}${cta(link,label)}<p style="font-size:13px">Se você já acessou o aplicativo, pode desconsiderar esta mensagem.</p>`);
   return {subject,html,text};
 }
 
 export function buildPasswordResetEmail({email,setupUrl,name=''}) {
-  const subject='Crie sua senha de acesso — Clube do Segredo';
-  const title='Escolha sua senha para entrar no aplicativo';
-  const text=`Olá${name?', '+firstName(name):''}!\n\nRecebemos uma solicitação para criar ou redefinir a senha da conta ${email}.\n\nClique neste link individual: ${setupUrl}\n\nSe você não solicitou, ignore esta mensagem. O link é válido por tempo limitado.\n\nEquipe Clube do Segredo`;
-  const html=layout(title,`<p>Recebemos uma solicitação para criar ou redefinir a senha de acesso.</p><p><strong>E-mail:</strong> ${escapeHTML(email)}</p>${button(setupUrl,'ESCOLHER MINHA SENHA')}<p style="font-size:13px;color:#5b665f">Se não foi você, ignore esta mensagem. O link é individual, de uso único e expira automaticamente.</p>`);
+  const subject='Link para criar sua senha - Segredo da Insulina';
+  const greeting=`Olá${name?', '+firstName(name):''}!`;
+  const text=`${greeting}\n\nRecebemos uma solicitação para criar ou redefinir a senha de acesso ao ${APP_NAME}.\n\nE-mail de acesso: ${email}\n\nCriar minha senha: ${setupUrl}\n\nSe não foi você, ignore este e-mail. O link é individual e expira.\n\n${footerText}`;
+  const html=layout('Crie sua senha pessoal',`<p>${escapeHTML(greeting)}</p><p>Recebemos uma solicitação para criar ou redefinir sua senha de acesso.</p>${loginLabel(email)}${cta(setupUrl,'Criar minha senha')}<p style="font-size:13px">Se não foi você, ignore esta mensagem. O link é individual e expira.</p>`);
   return {subject,html,text};
 }
