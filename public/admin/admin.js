@@ -96,7 +96,26 @@ async function premium(override){if(!S.selected)return;const name=S.selected.ema
  try{await api('',{method:'POST',body:JSON.stringify({action:'premium',userId:S.selected.id,override})});alertUser('Permissão atualizada com sucesso.','success');await Promise.all([load(),openDetail(S.selected.id)]);}catch(e){alertUser(e.message);}}
 async function reset(){if(!S.selected)return;if(!confirm(`Enviar e-mail de recuperação de senha para ${S.selected.email}?`))return;
  try{await api('',{method:'POST',body:JSON.stringify({action:'reset',userId:S.selected.id})});alertUser('Solicitação enviada ao Supabase. Confira o e-mail do comprador.','success');}catch(e){alertUser(e.message);}}
+async function addManualCustomer(event){
+ event.preventDefault();clearAlert();
+ const email=el('manual-email').value.trim().toLowerCase();
+ const plan=el('manual-plan').value;
+ if(!email||!['basic','premium'].includes(plan))return;
+ if(!confirm(`Liberar acesso ${plan==='premium'?'Premium / VIP':'Básico / Tradicional'} para ${email}? Se já existir, o plano atual será atualizado.`))return;
+ const button=el('manual-save');button.disabled=true;button.textContent='Cadastrando…';
+ el('manual-result').textContent='Criando ou atualizando acesso…';
+ try{
+  const result=await api('',{method:'POST',body:JSON.stringify({action:'create_manual',email,plan})});
+  const msg=result.emailSent?'Acesso liberado e link de senha enviado por e-mail. Oriente a conferir também o spam.':'Acesso liberado, mas houve falha no envio do e-mail. Localize o cliente e use Enviar link para criar/redefinir senha.';
+  el('manual-result').textContent=msg;
+  alertUser(msg,result.emailSent?'success':'error');
+  el('manual-email').value='';S.search=email;S.page=1;el('search').value=email;
+  await load();
+ }catch(e){el('manual-result').textContent='Não foi possível cadastrar: '+e.message;alertUser(e.message);}
+ finally{button.disabled=false;button.textContent='Liberar acesso e enviar link';}
+}
 window.addEventListener('DOMContentLoaded',async()=>{
+ el('manual-customer-form').onsubmit=addManualCustomer;
  el('app-activity-reload').onclick=loadAppActivity;
  setInterval(()=>{if(S.token&&!el('dashboard').hidden&&document.visibilityState==='visible')loadAppActivity()},30000);
  el('analytics-reload').onclick=loadDemographics;

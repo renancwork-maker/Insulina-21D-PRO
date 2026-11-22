@@ -26,3 +26,11 @@
 .pill.online{background:#e0f3e9;color:#266a47}
 @media(max-width:950px){.app-activity-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:650px){.app-activity-analytics{padding:15px}.app-activity-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.app-activity-metrics small{min-height:0}.app-activity-metrics strong{font-size:23px}.app-activity-metrics>div:last-child{grid-column:span 2}}
+
+/* Cadastro manual de clientes */
+.manual-customer{margin:24px 0;background:white;border:1px solid var(--line);border-radius:17px;padding:22px}
+.manual-customer h2{font-size:24px;margin:7px 0}.manual-customer p,.manual-customer small{color:var(--muted)}
+.manual-fields{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin:12px 0 16px}
+.manual-fields input,.manual-fields select{width:100%;border:1px solid #cbd8d0;border-radius:10px;padding:12px;background:white;color:var(--ink);font:inherit}
+.manual-customer .manual-note{font-weight:650;color:var(--dark)}
+@media(max-width:650px){.manual-customer{padding:15px}.manual-fields{grid-template-columns:1fr}.manual-customer button{width:100%}}

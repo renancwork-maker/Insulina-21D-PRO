@@ -23,6 +23,21 @@
   <div class="buyer-panels"><div class="buyer-panel"><h3>Dispositivo do primeiro acesso</h3><p>Percentuais sobre todos os compradores, incluindo quem ainda não abriu o aplicativo.</p><div id="device-bars" class="buyer-bars">Carregando…</div></div><div class="buyer-panel"><h3>Faixas etárias</h3><p>Percentuais entre os compradores que informaram a idade. Resposta opcional.</p><div id="age-bars" class="buyer-bars">Carregando…</div></div></div>
   <p class="buyer-note" id="analytics-note" role="status">Os dados começam a ser registrados após a publicação e a execução do SQL 06. Compras anteriores podem aparecer como “Não informado”.</p>
 </section>
+<section class="manual-customer" aria-labelledby="manual-customer-heading">
+  <div class="eyebrow">CADASTRO MANUAL</div>
+  <h2 id="manual-customer-heading">Adicionar cliente</h2>
+  <p>Digite o e-mail do cliente e selecione o acesso. Uma conta existente será atualizada sem alterar sua senha; uma conta nova receberá um link individual para criar a senha.</p>
+  <form id="manual-customer-form">
+    <div class="manual-fields"><div><label for="manual-email">E-mail do cliente</label>
+      <input id="manual-email" type="email" placeholder="cliente@exemplo.com" autocomplete="off" required maxlength="254"></div>
+    <div><label for="manual-plan">Tipo de acesso</label><select id="manual-plan" required>
+      <option value="basic">Básico / Tradicional</option><option value="premium">Premium / VIP</option>
+    </select></div></div>
+    <button type="submit" class="primary" id="manual-save">Liberar acesso e enviar link</button>
+  </form>
+  <p class="manual-note" id="manual-result" role="status" aria-live="polite"></p>
+  <small>Somente administradores autorizados podem usar esta função. O cadastro manual não registra uma compra na Wiapy.</small>
+</section>
 <div class="toolbar"><form id="search-form"><input id="search" type="search" placeholder="Pesquisar por e-mail ou nome" aria-label="Pesquisar cliente"><button class="primary">Pesquisar</button></form><span class="subtext">50 clientes por página</span></div>
 <div class="table-scroll"><table><thead><tr><th>Cliente</th><th>Plano</th><th>Acesso</th><th>Cadastro</th><th>Última entrada</th><th>PWA</th><th>Ação</th></tr></thead><tbody id="customer-rows"><tr><td colspan="7">Carregando…</td></tr></tbody></table></div>
 <div class="pagination"><button id="prev" class="outline">← Anterior</button><span id="page-label"></span><button id="next" class="outline">Próxima →</button></div>
