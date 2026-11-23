@@ -9,6 +9,7 @@
   const form=$('password-form');
   const submit=$('submit');
   let accessToken=null;
+  let verifiedUser=null;
 
   const showMessage=(message,isError=true)=>{
     feedback.textContent=message;
@@ -60,13 +61,26 @@
           token_hash:tokenHash,type:'recovery',
         });
         if(!session?.access_token)throw new Error('Sem sessao');
+        if(!session.user?.id || !session.user?.email)throw new Error('Sem identidade');
         accessToken=session.access_token;
+        verifiedUser={id:session.user.id,email:session.user.email};
         tokenHash=null;
       }
-      await postJson('/auth/v1/user','PUT',{
+      // Confirme a alteracao no Auth antes de declarar sucesso.
+      const changed=await postJson('/auth/v1/user','PUT',{
         password,
         data:{must_change_password:false},
       },accessToken);
+      if(changed?.id!==verifiedUser.id){
+        throw new Error('update_not_confirmed');
+      }
+      // Teste real de login: se falhar, nao diga ao comprador que a senha funciona.
+      const login=await postJson('/auth/v1/token?grant_type=password','POST',{
+        email:verifiedUser.email,password,
+      });
+      if(!login?.access_token || login.user?.id!==verifiedUser.id){
+        throw new Error('login_not_confirmed');
+      }
       $('password').value='';$('confirm-password').value='';
       form.classList.add('hidden');
       $('success').classList.remove('hidden');
@@ -74,12 +88,21 @@
       $('intro').textContent='Tudo pronto para começar sua rotina de 21 dias.';
       showMessage('Sua senha pessoal está pronta.',false);
       accessToken=null;
+      verifiedUser=null;
     } catch(error){
       if(!accessToken){
         showMessage('Este link expirou, já foi utilizado ou não é válido. Abra o aplicativo e use “Esqueci minha senha” para solicitar outro.');
         form.classList.add('hidden');
       }else{
-        showMessage('Não foi possível salvar a senha. Verifique se ela atende às regras de segurança e tente novamente.');
+        if(error?.status===422){
+          showMessage('O Supabase não aceitou esta senha. Escolha uma senha diferente, com pelo menos 10 caracteres, e tente novamente.');
+        }else if(error?.status===429){
+          showMessage('Muitas tentativas seguidas. Aguarde alguns minutos antes de tentar novamente.');
+        }else if(error?.message==='login_not_confirmed' || error?.status===400 || error?.status===401 || error?.status===403){
+          showMessage('A alteração foi solicitada, mas o login ainda não foi confirmado. Não feche esta tela. Tente novamente ou solicite um novo link. Se persistir, fale com o suporte.');
+        }else{
+          showMessage('Não foi possível confirmar sua senha neste momento. Verifique sua conexão e tente novamente; se persistir, solicite um novo link.');
+        }
       }
     } finally {
       submit.disabled=false;
