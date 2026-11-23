@@ -1,7 +1,6 @@
-import { timingSafeEqual, randomBytes, randomUUID } from 'node:crypto';
+import { timingSafeEqual, randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { buildEmail } from './email-templates.mjs';
-import { createPasswordSetupLink, retireLegacySharedPassword } from './password-invites.mjs';
 
 const response = (payload, status = 200) => Response.json(payload, { status, headers: { 'Cache-Control': 'no-store' } });
 const secureEqual = (a, b) => {
@@ -33,10 +32,8 @@ async function getOrCreateUser(admin, email, name) {
     if ((data?.users?.length || 0) < 1000) break;
   }
   const { data, error } = await admin.auth.admin.createUser({
-    // Nunca usar senha compartilhada: cada conta recebe uma senha aleatoria impossivel de prever.
-    // O comprador definira sua propria senha por um link de uso unico no Resend.
-    email, password: randomBytes(48).toString('base64url'), email_confirm: true,
-    user_metadata: { name: name || email.split('@')[0], must_change_password: true, source: 'wiapy', password_setup_flow: 'email_link_v2' },
+    email, email_confirm: true,
+    user_metadata: { name: name || email.split('@')[0], source: 'wiapy', auth_method: 'email_otp' },
   });
   if (error) {
     if (!/already|registered|exists/i.test(error.message || '')) throw error;
@@ -67,13 +64,7 @@ async function sendPurchaseEmail(admin, paymentId, tier, name, email, userId) {
   try {
     const appUrl = (process.env.APP_URL || '').replace(/\/$/, '');
     if (!/^https:\/\//.test(appUrl)) throw new Error('invalid_APP_URL');
-    // Upgrade de quem ja definiu a propria senha nao deve redefini-la.
-    const { data: found, error: findError } = await admin.auth.admin.getUserById(userId);
-    if (findError || !found?.user) throw new Error('auth_user_missing_for_email');
-    const needsSetup = found.user.user_metadata?.must_change_password === true;
-    if(needsSetup) await retireLegacySharedPassword(admin,found.user);
-    const setupUrl = needsSetup ? await createPasswordSetupLink(admin, email, appUrl) : null;
-    const { subject, html, text } = buildEmail({ tier, name, email, appUrl, setupUrl });
+    const {subject,html,text}=buildEmail({tier,name,email,appUrl});
     const apiResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type':'application/json', 'Idempotency-Key':`wiapy-${paymentId}-${randomUUID()}` },

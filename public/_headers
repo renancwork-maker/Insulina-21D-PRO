@@ -18,16 +18,3 @@
 /media/instalacao/*
   Cache-Control: public, max-age=604800
 
-/criar-senha/*
-  Cache-Control: no-store
-  Referrer-Policy: no-referrer
-  X-Robots-Tag: noindex, nofollow
-/js/criar-senha.js
-  Cache-Control: no-store
-
-/recuperar-senha/*
-  Cache-Control: no-store
-  Referrer-Policy: no-referrer
-  X-Robots-Tag: noindex, nofollow
-/js/recuperar-senha.js
-  Cache-Control: no-store

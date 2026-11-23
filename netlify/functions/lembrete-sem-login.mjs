@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildNoLoginReminderEmail } from './email-templates.mjs';
-import {createPasswordSetupLink, getAppUrl, retireLegacySharedPassword} from './password-invites.mjs';
+import {getAppUrl} from './access-email.mjs';
 
 // Agendamento em UTC: toda hora cheia. Executa somente em producao na Netlify.
 export const config = { schedule: '0 * * * *' };
@@ -45,10 +45,9 @@ export default async function handler() {
       const user=auth?.user;
       if(authError||!user)throw new Error('auth_lookup_failed');
       const email=String(user.email||'').trim().toLowerCase();
-      const meta=user.user_metadata||{};
       // No fluxo por link, verificar o token do e-mail conta como sign-in no Auth,
       // mas nao equivale a abrir o app. A atividade real sera checada abaixo.
-      if(email!==job.out_email || (user.last_sign_in_at && meta.password_setup_flow!=='email_link_v2')) {
+      if(email!==job.out_email || user.last_sign_in_at) {
         await finish('suppressed');results.skipped++;continue;
       }
       const [activity,legacy] = await Promise.all([
@@ -59,14 +58,8 @@ export default async function handler() {
       if((activity.data||[]).length||(legacy.data||[]).length) {
         await finish('suppressed');results.skipped++;continue;
       }
-      // Desativa a senha global legada apenas se a conta ainda nao criou senha pessoal.
-      await retireLegacySharedPassword(admin,user);
       const appUrl=getAppUrl();
-      const setupUrl=meta.must_change_password===true
-        ? await createPasswordSetupLink(admin,email,appUrl) : null;
-      const emailContent=buildNoLoginReminderEmail({
-        name:job.out_name,email,appUrl,setupUrl,
-      });
+      const emailContent=buildNoLoginReminderEmail({name:job.out_name,email,appUrl});
       // A chave evita duplicatas em reexecucoes/respostas interrompidas.
       const response=await fetch('https://api.resend.com/emails',{
         method:'POST',

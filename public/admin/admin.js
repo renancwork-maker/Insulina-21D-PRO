@@ -94,8 +94,8 @@ async function openDetail(id){clearAlert();try{const d=await api('?user='+encode
  }catch(e){alertUser(e.message);}}
 async function premium(override){if(!S.selected)return;const name=S.selected.email;const msg=override===true?'ativar VIP':override===false?'desativar VIP':'retornar o plano ao automático (Wiapy)';if(!confirm(`Confirma ${msg} para ${name}?`))return;
  try{await api('',{method:'POST',body:JSON.stringify({action:'premium',userId:S.selected.id,override})});alertUser('Permissão atualizada com sucesso.','success');await Promise.all([load(),openDetail(S.selected.id)]);}catch(e){alertUser(e.message);}}
-async function reset(){if(!S.selected)return;if(!confirm(`Enviar e-mail de recuperação de senha para ${S.selected.email}?`))return;
- try{await api('',{method:'POST',body:JSON.stringify({action:'reset',userId:S.selected.id})});alertUser('Solicitação enviada ao Supabase. Confira o e-mail do comprador.','success');}catch(e){alertUser(e.message);}}
+async function reset(){if(!S.selected)return;if(!confirm(`Enviar instruções de acesso por código para ${S.selected.email}?`))return;
+ try{await api('',{method:'POST',body:JSON.stringify({action:'send_access_instructions',userId:S.selected.id})});alertUser('Instruções enviadas pelo Resend. Oriente a conferir também o spam.','success');}catch(e){alertUser(e.message);}}
 async function addManualCustomer(event){
  event.preventDefault();clearAlert();
  const email=el('manual-email').value.trim().toLowerCase();
@@ -106,13 +106,13 @@ async function addManualCustomer(event){
  el('manual-result').textContent='Criando ou atualizando acesso…';
  try{
   const result=await api('',{method:'POST',body:JSON.stringify({action:'create_manual',email,plan})});
-  const msg=result.emailSent?'Acesso liberado e link de senha enviado por e-mail. Oriente a conferir também o spam.':'Acesso liberado, mas houve falha no envio do e-mail. Localize o cliente e use Enviar link para criar/redefinir senha.';
+  const msg=result.emailSent?'Acesso liberado e instruções para entrar por código enviadas por e-mail. Oriente a conferir também o spam.':'Acesso liberado, mas houve falha no envio do e-mail. Localize o cliente e use Enviar instruções de acesso.';
   el('manual-result').textContent=msg;
   alertUser(msg,result.emailSent?'success':'error');
   el('manual-email').value='';S.search=email;S.page=1;el('search').value=email;
   await load();
  }catch(e){el('manual-result').textContent='Não foi possível cadastrar: '+e.message;alertUser(e.message);}
- finally{button.disabled=false;button.textContent='Liberar acesso e enviar link';}
+ finally{button.disabled=false;button.textContent='Liberar acesso e enviar instruções';}
 }
 window.addEventListener('DOMContentLoaded',async()=>{
  el('manual-customer-form').onsubmit=addManualCustomer;

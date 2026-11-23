@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import {randomUUID, randomBytes} from 'node:crypto';
-import {createPasswordSetupLink,getAppUrl,sendResendEmail,retireLegacySharedPassword} from './password-invites.mjs';
-import {buildPasswordResetEmail} from './email-templates.mjs';
+import {randomUUID} from 'node:crypto';
+import {getAppUrl,sendResendEmail} from './access-email.mjs';
+import {buildAccessInstructionsEmail} from './email-templates.mjs';
 
 const answer = (json, status=200) => Response.json(json, { status, headers: {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'} });
 const validUUID = s => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s || '');
@@ -97,8 +97,7 @@ export default async function handler(request) {
       if(!user) {
         const {data:createdAuth,error:createError}=await supabase.auth.admin.createUser({
           email, email_confirm:true,
-          password:randomBytes(48).toString('base64url'),
-          user_metadata:{source:'admin_manual',must_change_password:true,password_setup_flow:'email_link_v2'},
+          user_metadata:{source:'admin_manual',auth_method:'email_otp'},
         });
         if(createError){
           // Caso outro processo tenha criado a conta, localizar sem sobrescrevê-la.
@@ -108,7 +107,7 @@ export default async function handler(request) {
       }
       if(!user?.id || (existingProfile?.id && existingProfile.id!==user.id))
         return answer({error:'account_conflict'},409);
-      // Atualiza somente o acesso, preservando a senha pessoal e os dados existentes.
+      // Atualiza somente o acesso, preservando os dados existentes.
       const {error:upsertError}=await supabase.from('profiles').upsert({
         id:user.id,email,active:true,plan:tier,admin_premium_override:tier==='premium'
       },{onConflict:'id'});
@@ -117,18 +116,13 @@ export default async function handler(request) {
         return answer({error:'profile_update_failed',account_created:created},500);
       }
       console.info('manual customer access set',JSON.stringify({admin:auth.user.id,userId:user.id,plan:tier}));
-      // Links individuais por Resend; nunca enviar senha temporaria compartilhada.
+      // O administrador envia somente instrucoes. O cliente solicita o OTP pelo app.
       try {
-        const {data:fresh}=await supabase.auth.admin.getUserById(user.id);
-        if(fresh?.user)await retireLegacySharedPassword(supabase,fresh.user);
-        const setupUrl=await createPasswordSetupLink(supabase,email,getAppUrl());
-        await sendResendEmail({to:email,emailMessage:buildPasswordResetEmail({email,setupUrl}),
-          idempotencyKey:`manual-acesso-${user.id}-${randomUUID()}`});
+        await sendResendEmail({to:email,emailMessage:buildAccessInstructionsEmail({email,appUrl:getAppUrl(),reason:'manual'}),idempotencyKey:`manual-instrucoes-${user.id}-${randomUUID()}`});
         return answer({ok:true,userId:user.id,created,plan:tier,emailSent:true});
       }catch(mailError){
-        console.error('manual customer invite error:',String(mailError?.message||'error').slice(0,90));
-        return answer({ok:true,userId:user.id,created,plan:tier,emailSent:false,
-          warning:'access_granted_but_invite_failed'});
+        console.error('manual access email error:',String(mailError?.message||'error').slice(0,90));
+        return answer({ok:true,userId:user.id,created,plan:tier,emailSent:false,warning:'access_granted_but_email_failed'});
       }
     }
     if (!body || !validUUID(body.userId)) return answer({error:'invalid_user_id'},400);
@@ -141,19 +135,11 @@ export default async function handler(request) {
       if (error) throw error;
       return answer({ok:true});
     }
-    if (body.action === 'reset') {
-      const {data:p,error:pe} = await supabase.from('profiles').select('email').eq('id',body.userId).single();
-      if (pe || !p?.email) return answer({error:'user_not_found'},404);
-      const appUrl=getAppUrl();
-      const {data:authRecord,error:authRecordError}=await supabase.auth.admin.getUserById(body.userId);
-      if(authRecordError||!authRecord?.user)return answer({error:'user_not_found'},404);
-      await retireLegacySharedPassword(supabase,authRecord.user);
-      const setupUrl=await createPasswordSetupLink(supabase,p.email,appUrl);
-      await sendResendEmail({to:p.email,
-        emailMessage:buildPasswordResetEmail({email:p.email,setupUrl}),
-        idempotencyKey:`admin-recuperar-${body.userId}-${randomUUID()}`,
-      });
-      await supabase.from('admin_audit_log').insert({admin_user_id:auth.user.id,target_user_id:body.userId,event:'password_reset_requested'});
+    if(body.action==='send_access_instructions'){
+      const {data:p,error:pe}=await supabase.from('profiles').select('email,name').eq('id',body.userId).single();
+      if(pe||!p?.email)return answer({error:'user_not_found'},404);
+      await sendResendEmail({to:p.email,emailMessage:buildAccessInstructionsEmail({email:p.email,name:p.name||'',appUrl:getAppUrl(),reason:'manual'}),idempotencyKey:`admin-instrucoes-${body.userId}-${randomUUID()}`});
+      await supabase.from('admin_audit_log').insert({admin_user_id:auth.user.id,target_user_id:body.userId,event:'access_instructions_sent'});
       return answer({ok:true});
     }
     return answer({error:'invalid_action'},400);

@@ -2,7 +2,7 @@
  * O código é produzido/validado pelo Supabase; não armazenar nem validar códigos no navegador.
  */
 (()=>{'use strict';
-  if (/^\/(admin|criar-senha|recuperar-senha|ativar)(\/|$)/.test(location.pathname)) return;
+  if (/^\/(admin|ativar)(\/|$)/.test(location.pathname)) return;
   const styles=`
   #cs-otp-cover {position:fixed;inset:0;z-index:2147483600;overflow-y:auto;background:linear-gradient(155deg,#153e30,#225941);display:flex;align-items:center;justify-content:center;padding:24px;font-family:Poppins,system-ui,sans-serif;color:#153e30;}
   #cs-otp-cover[hidden]{display:none!important}
