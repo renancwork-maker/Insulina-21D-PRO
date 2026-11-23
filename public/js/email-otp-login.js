@@ -37,7 +37,7 @@
     </form>
     <p id="cs-otp-msg" aria-live="polite"></p>
     <div id="cs-otp-actions" hidden><button id="cs-otp-back" type="button" class="secondary">Alterar e-mail</button><button id="cs-otp-resend" type="button" class="secondary" disabled>Reenviar código (60s)</button></div>
-    <p class="cs-help">Não encontrou o código? Confira também o spam.<br><a href="https://wa.me/5511932383351" target="_blank" rel="noopener noreferrer">Preciso de ajuda no WhatsApp</a></p>
+    <p class="cs-help">Não encontrou o código? Confira também o spam.<br><a href="mailto:suporte@digitalco.site?subject=Preciso%20de%20ajuda%20com%20meu%20acesso%20%E2%80%94%20Segredo%20da%20Insulina&amp;body=Ol%C3%A1%2C%20equipe%20do%20Segredo%20da%20Insulina%21%20%F0%9F%92%9A%0A%0AEstou%20precisando%20de%20ajuda%20para%20acessar%20ou%20utilizar%20o%20aplicativo.%0A%0AMeu%20nome%20completo%3A%20%5Bpreencha%20aqui%5D%0AE-mail%20utilizado%20na%20compra%3A%20%5Bpreencha%20aqui%5D%0AO%20que%20est%C3%A1%20acontecendo%3A%20%5Bdescreva%20aqui%20a%20dificuldade%2C%20a%20mensagem%20de%20erro%20ou%20a%20etapa%20em%20que%20parou%5D%0A%0AAgrade%C3%A7o%20pela%20aten%C3%A7%C3%A3o%20e%20aguardo%20as%20orienta%C3%A7%C3%B5es%21" title="Abrir e-mail de suporte com assunto e mensagem prontos">Enviar e-mail ao suporte</a></p>
   </section>`;
   document.body.appendChild(cover);
   const $=id=>document.getElementById(id), emailInput=$('cs-otp-email'),codeInput=$('cs-otp-code'),submit=$('cs-otp-submit'),msg=$('cs-otp-msg');
