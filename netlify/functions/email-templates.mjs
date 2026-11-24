@@ -3,7 +3,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 export function buildAccessInstructionsEmail({email,name='',appUrl,reason='manual'}) {
  const origin=new URL(appUrl).origin;
  if(!origin.startsWith('https://'))throw Error('invalid_app_url');
- const app=origin+'/';
+ const app=origin+'/app';
  const first=String(name||'').trim().split(/\s+/)[0]||'cliente';
  const intro=reason==='purchase'?'Seu pagamento foi aprovado e seu acesso está disponível.':reason==='reminder'?'Sua rotina de 21 dias já está disponível. Para começar, siga as instruções:':'Seu acesso ao aplicativo está liberado.';
  const subject=reason==='purchase'?'Compra confirmada — como acessar Segredo da Insulina':reason==='reminder'?'Seu acesso ao Segredo da Insulina está disponível':'Instruções de acesso — Segredo da Insulina';

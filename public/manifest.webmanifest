@@ -4,7 +4,7 @@
   "short_name": "Clube do Segredo",
   "description": "Acompanhe sua jornada de 21 dias e suas receitas.",
   "lang": "pt-BR",
-  "start_url": "/?origem=instalado",
+  "start_url": "/app?origem=instalado",
   "scope": "/",
   "display": "standalone",
   "background_color": "#16382a",

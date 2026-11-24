@@ -34,3 +34,12 @@
 
 /js/vip-support.js
   Cache-Control: no-cache
+
+/app
+  Cache-Control: no-store
+/app.html
+  Cache-Control: no-store
+/app/*
+  Cache-Control: no-store
+/css/vitrine.css
+  Cache-Control: public, max-age=0, must-revalidate
