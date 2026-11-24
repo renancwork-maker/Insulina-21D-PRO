@@ -1,5 +1,5 @@
 /* PWA: apenas recursos estaticos, sem armazenamento de dados pessoais. */
-const CACHE_NAME = 'clube-static-protocolo-20261124-v6';
+const CACHE_NAME = 'clube-static-protocolo-20261124-v7';
 const PRECACHE = ['/images/icon-192.png','/images/icon-512.png','/images/favicon.svg'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => (k.startsWith('clube-segredo-') || k.startsWith('clube-static-')) && k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
