@@ -34,7 +34,7 @@
       <span class="jornada-chip">Sua jornada • 21 dias</span>
       <h2 id="jornada-heading">${edit?'Alterar início da sua jornada':'Quando você vai começar?'}</h2>
       <p>Antes de iniciar, confira se você já tem em casa <strong>todos os ingredientes da lista de compras</strong>. Se ainda faltar algo, escolha um dia futuro para se organizar.</p>
-      <p><a href="/materiais/lista-compras-21-dias.html" target="_blank" rel="noopener">🛒 Abrir lista de compras completa</a></p>
+      <p><a href="/?protocolo=compras" target="_blank" rel="noopener">🛒 Abrir lista de compras completa</a></p>
       <form id="jornada-form">
         <label class="checkrow"><input type="checkbox" id="jornada-pronto" ${edit?'checked':''}><span>Já conferi a lista e tenho os ingredientes necessários para o dia em que vou começar.</span></label>
         <label for="jornada-data">Escolha o primeiro dia da sua jornada:</label>

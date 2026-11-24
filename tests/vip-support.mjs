@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+let state={verified:true,paid:true,valid:true};let filters={};
+globalThis.mock=()=>({auth:{getUser:async()=>({data:state.valid?{user:{id:'buyer'}}:{},error:state.valid?null:'invalid'})},rpc:async()=>({data:state.verified,error:null}),from(table){assert.equal(table,'wiapy_transactions');filters={};const q={select(){return q},eq(k,v){filters[k]=v;return q},limit(){return Promise.resolve({data:state.paid?[{tier:'premium',status:'paid'}]:[],error:null})}};return q;}});
+const code=(await readFile(new URL('../netlify/functions/vip-support.mjs',import.meta.url),'utf8')).replace("import { createClient } from '@supabase/supabase-js';",'const createClient=globalThis.mock;');
+Object.assign(process.env,{SUPABASE_URL:'https://mock.invalid',SUPABASE_SERVICE_ROLE_KEY:'mock',SUPABASE_ANON_KEY:'mock',WIAPY_PREMIUM_CHECKOUT_URL:'https://checkout.payt.com.br/old-test'});
+const {default:handler}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+const req=async(token)=>{const res=await handler(new Request('https://mock.invalid/api/vip-support',{method:'POST',headers:token?{Authorization:'Bearer '+token}:{}}));return {status:res.status,data:await res.json(),cache:res.headers.get('cache-control')}};
+for(const scenario of [{token:null},{token:'mock',verified:false},{token:'mock',paid:false},{token:'mock',valid:false}]){state={verified:true,paid:true,valid:true,...scenario};const result=await req(scenario.token);assert.equal(result.data.vip===true,false);assert.equal(result.data.phone,undefined);assert.equal(result.data.whatsapp,undefined);assert.match(result.cache,/no-store/)}
+assert.equal((await req(null)).data.checkout_url,'https://pay.wiapy.com/v9cVKwDK5_GC');
+delete process.env.WIAPY_PREMIUM_CHECKOUT_URL;assert.equal((await req(null)).data.checkout_url,'https://pay.wiapy.com/v9cVKwDK5_GC');
+for(const name of ['index-app-dia1a21-v3.js','index-Dbfo3jW4.js']){const js=await readFile(new URL('../public/js/'+name,import.meta.url),'utf8');assert.ok(js.includes('const cz="https://pay.wiapy.com/v9cVKwDK5_GC"'));assert.ok(!js.includes('https://checkout.payt.com.br/82f901a94aee65f6ff4ff2b5b55dc714'));}
+state={verified:true,paid:true,valid:true};const result=await req('mock');assert.equal(result.data.vip,true);assert.equal(result.data.whatsapp,'https://wa.me/5511932383351');assert.deepEqual(filters,{user_id:'buyer',tier:'premium',status:'paid'});assert.match(result.cache,/no-store/);console.log('OK: VIP pago e sessão verificada; sem número para básico, anônimo, sessão inválida ou não verificada.');

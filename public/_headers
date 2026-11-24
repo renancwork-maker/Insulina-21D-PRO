@@ -18,3 +18,19 @@
 /media/instalacao/*
   Cache-Control: public, max-age=604800
 
+/js/protocol-main.js
+  Cache-Control: no-cache
+/js/protocol-model.js
+  Cache-Control: no-cache
+/js/email-otp-login.js
+  Cache-Control: no-cache
+/css/protocol.css
+  Cache-Control: no-cache
+
+/acesso-simples.html
+  Cache-Control: no-store
+/js/simple-access.js
+  Cache-Control: no-cache
+
+/js/vip-support.js
+  Cache-Control: no-cache

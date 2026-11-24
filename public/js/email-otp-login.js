@@ -1,7 +1,3 @@
-/* Login por compra aprovada Wiapy: sem OTP, sem senha, e-mail ou celular.
- * AVISO: possuir o identificador da compra passa a ser suficiente para acessar
- * a conta. É uma opção menos segura do que verificar a identidade do comprador.
- */
 (()=>{'use strict';
   if (/^\/(admin|ativar|recuperar-senha)(\/|$)/.test(location.pathname)) return;
   const css=`
@@ -26,11 +22,11 @@
   cover.innerHTML=`<section id="cs-direct-card" aria-label="Acesso de compradores">
     <div class="cs-eyebrow">Segredo da Insulina • 21 dias</div>
     <h1>Entre no seu aplicativo</h1>
-    <p>Digite o e-mail ou celular informado na compra. Não é necessário receber código ou criar senha.</p>
-    <form id="cs-direct-form" novalidate>
+    <p>Digite o e-mail ou celular informado na compra para abrir o plano de 21 dias, sem senha e sem código. Para recuperar seus dados e fotos privados, use a opção de acesso protegido.</p>
+    <div class="cs-update" style="background:#e5f2e5;border:1px solid #a8c5ac;border-radius:12px;padding:12px;margin:14px 0"><strong>Temos novidades para você!</strong><p style="margin:6px 0 0">Atualizamos o aplicativo para tornar sua jornada de emagrecimento mais simples: cardápio personalizado, frutas, hidratação e acompanhamento dos 21 dias. Seu acesso à compra continua válido.</p></div><form id="cs-direct-form" novalidate>
       <label for="cs-direct-id">E-mail ou celular da compra</label>
       <input id="cs-direct-id" type="text" autocomplete="username" required placeholder="E-mail ou celular com DDD" maxlength="254"/>
-      <button id="cs-direct-submit" type="submit">Acessar meu aplicativo</button>
+      <div id="cs-code-row" hidden><label for="cs-code">Código recebido por e-mail</label><input id="cs-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Código de acesso"></div><button id="cs-direct-submit" type="submit">Entrar no aplicativo</button><button id="cs-private" type="button" style="background:#e8eee6;color:#173d2c">Acessar meus dados e fotos salvos</button><button id="cs-resend" type="button" hidden>Reenviar código</button><button id="cs-change" type="button" hidden>Alterar e-mail ou celular</button>
     </form>
     <p id="cs-direct-msg" role="status" aria-live="polite"></p>
     <p class="cs-help">Não localizou sua compra? <a href="mailto:suporte@digitalco.site?subject=Ajuda%20com%20meu%20acesso">Fale com o suporte</a>.</p>
@@ -40,37 +36,39 @@
   const field=document.getElementById('cs-direct-id');
   const submit=document.getElementById('cs-direct-submit');
   const msg=document.getElementById('cs-direct-msg');
-  let busy=false;
+  let busy=false, sent=false, privateMode=false, checkedToken=null, syncSeq=0;
+  const privateButton=document.getElementById("cs-private");
+  const code=document.getElementById('cs-code'), codeRow=document.getElementById('cs-code-row'), resend=document.getElementById('cs-resend'), change=document.getElementById('cs-change');
   function showMessage(text,error=false){msg.textContent=text;msg.className=error?'error':'';}
-  form.addEventListener('submit',async e=>{
-    e.preventDefault(); if(busy)return;
-    const identifier=field.value.trim();
-    if(!identifier){showMessage('Digite o e-mail ou celular utilizado na compra.',true);return;}
-    const sb=window.__clubeSupabase;
-    if(!sb){showMessage('Estamos carregando o acesso. Tente novamente.',true);return;}
-    busy=true;submit.disabled=true;submit.textContent='Conferindo sua compra…';showMessage('');
+  async function process(sendOnly=false){
+    if(busy)return;const identifier=field.value.trim(),sb=window.__clubeSupabase;
+    if(!identifier||!sb){showMessage('Informe os dados da compra e tente novamente.',true);return;}
+    const action=!privateMode?'direct':(!sent||sendOnly)?'send':'verify';if(action==='verify'&&!/^\d{6,10}$/.test(code.value.trim())){showMessage('Digite o código recebido.',true);return;}
+    busy=true;submit.disabled=resend.disabled=true;showMessage('');
     try{
-      const res=await fetch('/api/purchase-direct-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier})});
-      const body=await res.json().catch(()=>({}));
-      if(!res.ok || !body.token_hash){
-        if(body.error==='phone_lookup_unavailable')showMessage('A consulta por celular ainda não está habilitada. Utilize o e-mail da compra.',true);
-        else if(body.error==='purchase_not_found')showMessage('Não encontramos uma compra aprovada para esse e-mail ou celular. Confira os dados ou fale com o suporte.',true);
-        else showMessage('Não foi possível consultar sua compra agora. Tente novamente.',true);
-        return;
-      }
-      const {data,error}=await sb.auth.verifyOtp({token_hash:body.token_hash,type:'magiclink'});
-      if(error||!data?.session){showMessage('Não foi possível iniciar seu acesso. Tente novamente.',true);return;}
-      showMessage('Compra confirmada! Abrindo o aplicativo…');
-      const store=window.__clubeUsuarioStore;
-      if(store?.getState)await store.getState().init();
-      location.replace('/');
-    }catch{showMessage('Erro de conexão. Tente novamente.',true)}
-    finally{busy=false;submit.disabled=false;submit.textContent='Acessar meu aplicativo';}
-  });
-  function sync(){const store=window.__clubeUsuarioStore;if(!store?.getState)return;const state=store.getState();if(state.ready)cover.hidden=!!state.user;}
+      const res=await fetch('/api/purchase-direct-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier,action,code:action==='verify'?code.value.trim():undefined})});const body=await res.json();
+      if(!res.ok){showMessage(body.error==='purchase_not_found'?'Compra não localizada. Confira o e-mail ou celular informado.':body.error==='invalid_code'?'Código incorreto ou expirado. Confira ou solicite outro.':'Não foi possível continuar. Tente novamente ou fale com o suporte.',true);return;}
+      if(action==='direct'){sessionStorage.removeItem('clube-simple-tab-v1');location.assign('/acesso-simples.html');return;}
+      if(action==='send'){sent=true;field.readOnly=true;codeRow.hidden=resend.hidden=change.hidden=false;code.focus();showMessage('Se houver uma compra aprovada, o código chegará ao e-mail da compra. Confira o spam.');return;}
+      const {error}=await sb.auth.setSession({access_token:body.access_token,refresh_token:body.refresh_token});if(error)throw error;
+      location.replace('/'+location.search);
+    }catch{showMessage('Não foi possível concluir o acesso. Tente novamente.',true)}
+    finally{busy=false;submit.disabled=resend.disabled=false;submit.textContent=sent?'Confirmar código':privateMode?'Enviar código':'Entrar no aplicativo';}
+  }
+  privateButton.addEventListener('click',()=>{if(busy)return;privateMode=true;change.hidden=false;change.textContent='Voltar ao acesso sem código';submit.textContent='Enviar código';showMessage('Para proteger seus dados e fotos, enviaremos um código ao e-mail da compra.');if(field.value.trim())process();else field.focus();});
+  form.addEventListener('submit',e=>{e.preventDefault();process()});resend.addEventListener('click',()=>process(true));change.addEventListener('click',()=>{if(busy)return;sent=false;privateMode=false;field.readOnly=false;codeRow.hidden=resend.hidden=change.hidden=true;code.value='';submit.textContent='Entrar no aplicativo';showMessage('');field.focus()});
+  function updateNotice(){if(sessionStorage.getItem('clube-update-v3')||document.getElementById('cs-update-banner'))return;const b=document.createElement('aside');b.id='cs-update-banner';b.setAttribute('role','region');b.setAttribute('aria-label','Novidades do aplicativo');b.style.cssText='position:fixed;z-index:2147483400;bottom:12px;left:12px;right:12px;max-width:460px;margin:auto;padding:16px;background:#fffdf5;color:#173d2c;border:2px solid #8cb79b;border-radius:16px;box-shadow:0 8px 28px #0004;font:16px/1.45 system-ui';b.innerHTML='<strong>💚 Temos novidades para você!</strong><p>Atualizamos o aplicativo para facilitar sua jornada de emagrecimento, com cardápio personalizado, frutas, hidratação e acompanhamento dos 21 dias. Sua compra continua válida.</p><button type="button" style="width:100%;padding:12px;border:0;border-radius:10px;background:#196747;color:white;font-weight:700;font-size:16px">Entendi</button>';b.querySelector('button').onclick=()=>{sessionStorage.setItem('clube-update-v3','1');b.remove()};document.body.append(b);}
+  async function sync(){const store=window.__clubeUsuarioStore,sb=window.__clubeSupabase;if(!store?.getState||!sb)return;const state=store.getState();if(!state.ready)return;const seq=++syncSeq;if(!state.user){document.getElementById('cs-update-banner')?.remove();cover.hidden=false;checkedToken=null;return;}
+    const {data}=await sb.auth.getSession();const token=data?.session?.access_token;if(seq!==syncSeq)return;
+    if(token&&token===checkedToken)return;cover.hidden=false;
+    const result=await sb.rpc('clube_protocolo_sessao_segura');if(seq!==syncSeq)return;
+    if(!result.error&&result.data===true){checkedToken=token;cover.hidden=true;updateNotice();window.dispatchEvent(new Event('clube:protocolo-seguro'));}
+    else {checkedToken=result.error?null:token;cover.hidden=false;field.value=state.user.email||'';showMessage(result.error?'Configuração de segurança pendente. Fale com o suporte.':'Confirme seu e-mail para proteger seu perfil e fotos.');}
+  }
+  if(new URLSearchParams(location.search).get('privado')==='1'){privateMode=true;change.hidden=false;change.textContent='Voltar ao acesso sem código';submit.textContent='Enviar código';showMessage('Entre com o e-mail ou celular da compra para recuperar seus dados privados.');}
   let attempts=0,subscribed=false;
   const timer=setInterval(()=>{const store=window.__clubeUsuarioStore;attempts++;
-    if(store?.subscribe&&!subscribed){subscribed=true;store.subscribe(sync);sync();clearInterval(timer);}
+    if(store?.subscribe&&!subscribed){subscribed=true;store.subscribe(sync);window.__clubeSupabase?.auth.onAuthStateChange(()=>setTimeout(sync,0));sync();clearInterval(timer);}
     else if(attempts>=150){clearInterval(timer);showMessage('Não foi possível carregar o aplicativo. Atualize a página.',true);}
   },100);
 })();
