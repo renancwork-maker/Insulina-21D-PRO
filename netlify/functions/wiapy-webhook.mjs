@@ -9,6 +9,13 @@ const secureEqual = (a, b) => {
 };
 const ids = raw => new Set(String(raw || '').split(',').map(x => x.trim()).filter(Boolean));
 const goodEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
+function phoneDigits(raw) {
+  const text = typeof raw === 'object' && raw ? String(raw.number || raw.phone || raw.value || '') : String(raw || '');
+  let number = text.replace(/\D/g, '');
+  if (number.startsWith('55') && [12,13].includes(number.length)) number = number.slice(2);
+  return [10,11].includes(number.length) ? number : null;
+}
+
 
 function getTier(checkoutId) {
   const basic = ids(process.env.WIAPY_BASIC_CHECKOUT_ID);
@@ -98,6 +105,7 @@ export default async function handler(request) {
   const amount = Number(payment.amount);
   const email = String(body?.customer?.email || '').trim().toLowerCase();
   const name = String(body?.customer?.name || '').trim().slice(0,150);
+  const phone = phoneDigits(body?.customer?.phone || body?.customer?.phone_number || body?.customer?.mobile || '');
   if (!paymentId) return response({ok:false,error:'missing_payment_id'},400);
   if (!['paid','refunded','chargedback'].includes(status)) return response({ok:true,ignored:'not_paid'});
   if (!goodEmail(email)) return response({ok:false,error:'invalid_email'},400);
@@ -107,11 +115,21 @@ export default async function handler(request) {
     if (status !== 'paid') {
       const { data, error } = await admin.rpc('wiapy_refund_payment', {p_payment_id:paymentId});
       if (error) throw error;
+      // Retirar identificação telefônica do pagamento estornado.
+      const {error:contactError} = await admin.from('wiapy_purchase_contacts').delete().eq('payment_id',paymentId);
+      if (contactError && contactError.code !== '42P01' && contactError.code !== 'PGRST205')
+        console.warn('[wiapy] phone contact cleanup',contactError.code);
       return response({ok:true,action:'refund_checked',found:Boolean(data)});
     }
     const userId = await getOrCreateUser(admin,email,name);
     const applied = await updatePurchase(admin,{ paymentId, checkoutId, amount, email, name, tier, userId, status });
     if (applied === 'refunded') return response({ok:true,ignored:'previous_refund'});
+    if (phone) {
+      // O mapeamento de telefone depende da migração SQL. Falhas nele não impedem a compra/e-mail.
+      const {error:contactError} = await admin.from('wiapy_purchase_contacts')
+        .upsert({payment_id:paymentId,user_id:userId,phone_digits:phone},{onConflict:'payment_id'});
+      if (contactError) console.warn('[wiapy] phone contact not saved',String(contactError.code || 'db_error'));
+    }
     const mail = await sendPurchaseEmail(admin,paymentId,tier,name,email,userId);
     return response({ok:true,action:'purchase_processed',tier,email_status:mail});
   } catch (error) {
