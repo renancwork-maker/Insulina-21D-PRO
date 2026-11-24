@@ -4,8 +4,9 @@ const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control
 const validEmail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)&&v.length<=254;
 function phoneDigits(v){let d=String(v||'').replace(/\D/g,'');if(d.startsWith('55')&&[12,13].includes(d.length))d=d.slice(2);return [10,11].includes(d.length)?d:null;}
 const COOKIE='clube_simple_access';
-function simpleToken(secret){const payload=`${Date.now()+12*60*60*1000}.${randomBytes(24).toString('hex')}`;return `${payload}.${createHmac('sha256',secret).update('clube-simple-v1:'+payload).digest('hex')}`;}
-function simpleValid(request,secret){const token=(request.headers.get('cookie')||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(COOKIE+'='))?.slice(COOKIE.length+1)||'';const [expiry,nonce,sig,...extra]=token.split('.');if(extra.length||!/^\d{13}$/.test(expiry||'')||Number(expiry)<=Date.now()||! /^[a-f0-9]{48}$/.test(nonce||'')||! /^[a-f0-9]{64}$/.test(sig||''))return false;const expected=createHmac('sha256',secret).update('clube-simple-v1:'+expiry+'.'+nonce).digest();return timingSafeEqual(expected,Buffer.from(sig,'hex'));}
+function simpleToken(secret){const payload=`${Date.now()+30*24*60*60*1000}.${randomBytes(24).toString('hex')}`;return `${payload}.${createHmac('sha256',secret).update('clube-simple-v1:'+payload).digest('hex')}`;}
+function readCookie(request){return (request.headers.get('cookie')||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(COOKIE+'='))?.slice(COOKIE.length+1)||'';}
+function simpleValid(request,secret){const token=readCookie(request);const [expiry,nonce,sig,...extra]=token.split('.');if(extra.length||!/^\d{13}$/.test(expiry||'')||Number(expiry)<=Date.now()||! /^[a-f0-9]{48}$/.test(nonce||'')||! /^[a-f0-9]{64}$/.test(sig||''))return false;const expected=createHmac('sha256',secret).update('clube-simple-v1:'+expiry+'.'+nonce).digest();return timingSafeEqual(expected,Buffer.from(sig,'hex'));}
 function simpleCookie(value,maxAge){return `${COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;}
 export default async function handler(request){
  if(request.method!=='POST')return json({error:'method_not_allowed'},405);
@@ -13,7 +14,7 @@ export default async function handler(request){
  const publicKey=SUPABASE_PUBLISHABLE_KEY||SUPABASE_ANON_KEY;
  if(!SUPABASE_URL||!SUPABASE_SERVICE_ROLE_KEY||!publicKey)return json({error:'service_unavailable'},503);
  let body;try{body=await request.json()}catch{return json({error:'invalid_request'},400)}
- if(body?.action==='simple-status')return simpleValid(request,SUPABASE_SERVICE_ROLE_KEY)?json({ok:true}):json({error:'access_required'},401);
+ if(body?.action==='simple-status')return simpleValid(request,SUPABASE_SERVICE_ROLE_KEY)?json({ok:true,local_id:readCookie(request).split('.')[1]}):json({error:'access_required'},401);
  if(body?.action==='simple-logout')return Response.json({ok:true},{headers:{'Cache-Control':'no-store','Set-Cookie':simpleCookie('',0)}});
  const input=String(body?.identifier||'').trim(),action=body?.action||'send';
  if(!input||input.length>254||!['send','verify','direct'].includes(action))return json({error:'invalid_identifier'},400);
@@ -33,7 +34,7 @@ export default async function handler(request){
   const {data:payments,error:te}=await admin.from('wiapy_transactions').select('tier,status').eq('user_id',id).eq('status','paid').limit(100);if(te)throw te;
   if(!(payments||[]).some(x=>['basic','premium'].includes(x.tier)))return absent();
   // Direct access is deliberately NOT a Supabase identity or account session.
-  if(action==='direct')return Response.json({ok:true},{headers:{'Cache-Control':'no-store','Set-Cookie':simpleCookie(simpleToken(SUPABASE_SERVICE_ROLE_KEY),43200)}});
+  if(action==='direct')return Response.json({ok:true},{headers:{'Cache-Control':'no-store','Set-Cookie':simpleCookie(simpleToken(SUPABASE_SERVICE_ROLE_KEY),2592000)}});
   if(action==='send'){
    const {error}=await auth.auth.signInWithOtp({email:p.email,options:{shouldCreateUser:false}});
    if(error&&![429,400].includes(error.status))throw error;

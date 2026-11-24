@@ -1,5 +1,6 @@
 (()=>{'use strict';
   if (/^\/(admin|ativar|recuperar-senha)(\/|$)/.test(location.pathname)) return;
+  const params=new URLSearchParams(location.search);if(!params.has('privado')&&!params.has('novo')){try{if(localStorage.getItem('clube-simple-current'))fetch('/api/purchase-direct-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'simple-status'})}).then(r=>{if(r.ok)location.replace('/acesso-simples.html');else if(r.status===401){const k=localStorage.getItem('clube-simple-current');if(k)localStorage.removeItem(k);localStorage.removeItem('clube-simple-current')}}).catch(()=>{})}catch{}}
   const css=`
     #cs-direct-cover{position:fixed;inset:0;z-index:2147483600;overflow-y:auto;background:linear-gradient(155deg,#153e30,#225941);display:flex;align-items:center;justify-content:center;padding:24px;font-family:Poppins,system-ui,sans-serif;color:#153e30}
     #cs-direct-cover[hidden]{display:none!important}
@@ -22,8 +23,8 @@
   cover.innerHTML=`<section id="cs-direct-card" aria-label="Acesso de compradores">
     <div class="cs-eyebrow">Segredo da Insulina • 21 dias</div>
     <h1>Entre no seu aplicativo</h1>
-    <p>Digite o e-mail ou celular informado na compra para abrir o plano de 21 dias, sem senha e sem código. Para recuperar seus dados e fotos privados, use a opção de acesso protegido.</p>
-    <div class="cs-update" style="background:#e5f2e5;border:1px solid #a8c5ac;border-radius:12px;padding:12px;margin:14px 0"><strong>Temos novidades para você!</strong><p style="margin:6px 0 0">Atualizamos o aplicativo para tornar sua jornada de emagrecimento mais simples: cardápio personalizado, frutas, hidratação e acompanhamento dos 21 dias. Seu acesso à compra continua válido.</p></div><form id="cs-direct-form" novalidate>
+    <p>Digite o e-mail ou celular da compra. Sem senha e sem código.</p>
+    <div class="cs-update" style="background:#e5f2e5;border:1px solid #a8c5ac;border-radius:12px;padding:12px;margin:14px 0"><strong>Temos novidades para você!</strong><p style="margin:6px 0 0">O aplicativo ficou mais simples! Sua compra continua válida.</p></div><form id="cs-direct-form" novalidate>
       <label for="cs-direct-id">E-mail ou celular da compra</label>
       <input id="cs-direct-id" type="text" autocomplete="username" required placeholder="E-mail ou celular com DDD" maxlength="254"/>
       <div id="cs-code-row" hidden><label for="cs-code">Código recebido por e-mail</label><input id="cs-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Código de acesso"></div><button id="cs-direct-submit" type="submit">Entrar no aplicativo</button><button id="cs-private" type="button" style="background:#e8eee6;color:#173d2c">Acessar meus dados e fotos salvos</button><button id="cs-resend" type="button" hidden>Reenviar código</button><button id="cs-change" type="button" hidden>Alterar e-mail ou celular</button>
@@ -48,7 +49,7 @@
     try{
       const res=await fetch('/api/purchase-direct-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier,action,code:action==='verify'?code.value.trim():undefined})});const body=await res.json();
       if(!res.ok){showMessage(body.error==='purchase_not_found'?'Compra não localizada. Confira o e-mail ou celular informado.':body.error==='invalid_code'?'Código incorreto ou expirado. Confira ou solicite outro.':'Não foi possível continuar. Tente novamente ou fale com o suporte.',true);return;}
-      if(action==='direct'){sessionStorage.removeItem('clube-simple-tab-v1');location.assign('/acesso-simples.html');return;}
+      if(action==='direct'){try{const k=localStorage.getItem('clube-simple-current');if(k)localStorage.removeItem(k);localStorage.removeItem('clube-simple-current')}catch{}sessionStorage.removeItem('clube-simple-tab-v1');location.assign('/acesso-simples.html');return;}
       if(action==='send'){sent=true;field.readOnly=true;codeRow.hidden=resend.hidden=change.hidden=false;code.focus();showMessage('Se houver uma compra aprovada, o código chegará ao e-mail da compra. Confira o spam.');return;}
       const {error}=await sb.auth.setSession({access_token:body.access_token,refresh_token:body.refresh_token});if(error)throw error;
       location.replace('/'+location.search);
@@ -62,7 +63,7 @@
     const {data}=await sb.auth.getSession();const token=data?.session?.access_token;if(seq!==syncSeq)return;
     if(token&&token===checkedToken)return;cover.hidden=false;
     const result=await sb.rpc('clube_protocolo_sessao_segura');if(seq!==syncSeq)return;
-    if(!result.error&&result.data===true){checkedToken=token;cover.hidden=true;updateNotice();window.dispatchEvent(new Event('clube:protocolo-seguro'));}
+    if(!result.error&&result.data===true){checkedToken=token;cover.hidden=true;window.dispatchEvent(new Event('clube:protocolo-seguro'));}
     else {checkedToken=result.error?null:token;cover.hidden=false;field.value=state.user.email||'';showMessage(result.error?'Configuração de segurança pendente. Fale com o suporte.':'Confirme seu e-mail para proteger seu perfil e fotos.');}
   }
   if(new URLSearchParams(location.search).get('privado')==='1'){privateMode=true;change.hidden=false;change.textContent='Voltar ao acesso sem código';submit.textContent='Enviar código';showMessage('Entre com o e-mail ou celular da compra para recuperar seus dados privados.');}

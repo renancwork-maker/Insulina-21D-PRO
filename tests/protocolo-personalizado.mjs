@@ -20,3 +20,12 @@ assert.equal(M.fruitChoice(picked,8,1,0),'morango');assert.equal(M.fruitChoice(p
 assert.ok(M.shopping(picked).morango>0);assert.ok(!M.shopping(p).morango);assert.ok(M.shopping(picked).maca<M.shopping(p).maca);
 assert.equal(M.fruitChoice({...p,weekly_choices:{'fruit-1-1':'invalid'}},1,1,0),'maca');
 console.log('OK: 10 frutas × 4 refeições × 4 opções × 21 dias × 3 perfis; lista de compras, repetição e substituição sem duplicidade.');
+for(const age of [18,25,34,35,65,110]) assert.ok(Number.isFinite(M.metrics({...p,age}).kcal));
+const j={start_date:'2026-11-28',ingredients_confirmed:true};
+assert.equal(M.journeyState(null,'2026-11-28').phase,'prepare');
+assert.equal(M.journeyState({...j,ingredients_confirmed:false},'2026-11-29').phase,'prepare');
+assert.equal(M.journeyState(j,'2026-11-27').phase,'waiting');
+assert.equal(M.journeyState(j,'2026-11-28').day,1);
+assert.equal(M.journeyState(j,'2026-12-18').day,21);
+assert.equal(M.journeyState(j,'2026-12-19').phase,'done');
+console.log('OK: preparação exige confirmação; desbloqueio no dia escolhido; dias 1–21 e encerramento.');

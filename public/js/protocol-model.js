@@ -9,6 +9,7 @@ const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',ye
 function dateNow(){const d=today();return `${d.year}-${d.month}-${d.day}`}
 function shift(date,n){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function diff(a,b){return Math.round((Date.parse(a+'T12:00:00Z')-Date.parse(b+'T12:00:00Z'))/86400000)}
+function journeyState(j,today=dateNow()){if(!j?.ingredients_confirmed||!/^\d{4}-\d{2}-\d{2}$/.test(j.start_date||''))return {phase:"prepare",day:0};const d=diff(today,j.start_date)+1;return d<1?{phase:"waiting",day:0}:d>21?{phase:"done",day:21}:{phase:"active",day:d};}
 function metrics(p){const w=Number(p.weight_kg),h=Number(p.height_cm),a=Number(p.age);if(!Number.isFinite(w+h+a)||w<=0||h<=0)throw Error('Perfil inválido');const factor={low:1.2,light:1.35,moderate:1.55}[p.activity]||1.35;const bmi=w/(h/100)**2;const kcal=Math.round((10*w+6.25*h-5*a-161)*factor);const review=!!p.needs_review||bmi<(a>=60?22:18.5)||bmi>=40||kcal<1500||kcal>3000;return {water:Math.round(w*30),kcal,bmi,review};}
 function energy(items){return Object.entries(items).reduce((n,[k,v])=>n+foods[k][1]*v/100,0)}
 function fruitChoice(p,day,m,o){const v=p.weekly_choices?.[`fruit-${(day-1)%7+1}-${m}`];if(fruits.includes(v))return v;return Object.keys(meals[m].options[o].items).find(k=>fruits.includes(k))|| (m===1?'maca':'laranja');}
@@ -16,5 +17,5 @@ function portion(p,m,o,day=1){const {kcal,review}=metrics(p), meal=meals[m];if(r
 function choice(p,day,m){const x=p.weekly_choices?.[`${(day-1)%7+1}-${m}`];return Number.isInteger(x)&&x>=0&&x<=3?x:rotation[(day-1)%7][m]}
 function shopping(p){const out={};for(let d=1;d<=7;d++)for(let m=0;m<4;m++){const a=portion(p,m,choice(p,d,m),d);if(!a)return null;for(const [k,v] of Object.entries(a.items))out[k]=(out[k]||0)+v*foods[k][3];}return out;}
 function fmt(n){return Number(n).toLocaleString('pt-BR',{maximumFractionDigits:2})}
-window.ProtocolModel={foods,meals,fruits,fruitChoice,metrics,portion,choice,shopping,fmt,dateNow,shift,diff,energy};
+window.ProtocolModel={foods,meals,fruits,fruitChoice,metrics,portion,choice,shopping,fmt,dateNow,shift,diff,energy,journeyState};
 })();
