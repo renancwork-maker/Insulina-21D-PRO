@@ -6,15 +6,16 @@ const src=read('public/js/protocol-main.js');
 // Exercise actual UI rendering without a real account or database.
 const extract=src.slice(src.indexOf('function pdfOffer(){'),src.indexOf('const el=s=>'));
 const nodes=new Map();
-const ctx=vm.createContext({close(){},screen:'',overlay:null,home(){},document:{createElement(){return {setAttribute(){},querySelector(key){if(!nodes.has(key))nodes.set(key,{addEventListener(){}});return nodes.get(key)}}},body:{append(){}}},sessionStorage:{getItem(){return '1'}},window:{}});
+const ctx=vm.createContext({profile:null,close(){},screen:'',overlay:null,home(){},document:{createElement(){return {setAttribute(){},querySelector(key){if(!nodes.has(key))nodes.set(key,{addEventListener(){}});return nodes.get(key)}}},body:{append(){}}},sessionStorage:{getItem(){return '1'}},window:{}});
 vm.runInContext(extract,ctx);
-for(const view of ['home','prep','secrets','onboarding','other']){
+for(const completed of [false,true]){
+ ctx.profile=completed?{age:45,weight_kg:70,height_cm:160}:null;
+ for(const view of ['home','prep','secrets','onboarding','other']){
  const html=vm.runInContext(`show('<h1>Teste</h1><button id="normal">Continuar</button>',{view:'${view}'}).innerHTML`,ctx);
  assert.ok(html.includes('id="normal"'));
- assert.equal(html.includes('https://pay.wiapy.com/qAaVu3gMsUAQ'),view!=='other');
- if(view!=='other'){assert.match(html,/Compra opcional/);assert.match(html,/não precisa comprar novamente/);assert.match(html,/target="_blank" rel="noopener noreferrer"/)}
+ assert.equal(html.includes('https://pay.wiapy.com/qAaVu3gMsUAQ'),completed&&['home','prep','secrets'].includes(view));
+ }
 }
-assert.match(src,/view:edit\?'other':'onboarding'/);
-assert.match(read('public/index.html'),/protocol-main\.js\?v=12/);
-assert.match(read('public/js/simple-access.js'),/protocol-main\.js\?v=12/);
-console.log('OK: oferta PDF renderizada nas quatro telas, checkout correto e acesso comum preservado.');
+assert.match(read('public/index.html'),/protocol-main\.js\?v=13/);
+assert.match(read('public/js/simple-access.js'),/protocol-main\.js\?v=13/);
+console.log('OK: PDF oculto antes do questionário e nas telas de edição; exibido após conclusão.');

@@ -14,3 +14,9 @@ assert.equal(writes.length,2);for(const w of writes){assert.equal(w.name,'clube_
 paid=false;assert.equal((await handler(req({action:'direct',identifier:'test@example.com'}))).status,401);assert.equal(writes.length,2);
 paid=true;active=false;assert.equal((await handler(req({action:'direct',identifier:'test@example.com'}))).status,401);assert.equal(writes.length,2);
 active=true;rpcFail=true;assert.equal((await handler(req({action:'direct',identifier:'test@example.com'}))).status,200);assert.equal(writes.length,3);assert.equal(otpCalls,0);console.log('OK: registros apenas para compras válidas; falha de telemetria não bloqueia login.');
+
+paid=true;active=true;rpcFail=false;
+const getLocalId=async identifier=>{const r=await handler(req({action:'direct',identifier}));const cookie=r.headers.get('set-cookie').split(';')[0];return (await (await handler(req({action:'simple-status'},cookie))).json()).local_id};
+assert.equal(await getLocalId('test@example.com'),await getLocalId('11999999999'));
+assert.equal(await getLocalId('test@example.com'),await getLocalId('test@example.com'));
+console.log('OK: identificador persistente por comprador, mesmo por e-mail ou telefone.');

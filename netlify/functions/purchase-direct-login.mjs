@@ -1,10 +1,10 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const validEmail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)&&v.length<=254;
 function phoneDigits(v){let d=String(v||'').replace(/\D/g,'');if(d.startsWith('55')&&[12,13].includes(d.length))d=d.slice(2);return [10,11].includes(d.length)?d:null;}
 const COOKIE='clube_simple_access';
-function simpleToken(secret){const payload=`${Date.now()+30*24*60*60*1000}.${randomBytes(24).toString('hex')}`;return `${payload}.${createHmac('sha256',secret).update('clube-simple-v1:'+payload).digest('hex')}`;}
+function simpleToken(secret,id){const localId=createHmac('sha256',secret).update('clube-local-account-v1:'+id).digest('hex').slice(0,48);const payload=`${Date.now()+30*24*60*60*1000}.${localId}`;return `${payload}.${createHmac('sha256',secret).update('clube-simple-v1:'+payload).digest('hex')}`;}
 function readCookie(request){return (request.headers.get('cookie')||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(COOKIE+'='))?.slice(COOKIE.length+1)||'';}
 function simpleValid(request,secret){const token=readCookie(request);const [expiry,nonce,sig,...extra]=token.split('.');if(extra.length||!/^\d{13}$/.test(expiry||'')||Number(expiry)<=Date.now()||! /^[a-f0-9]{48}$/.test(nonce||'')||! /^[a-f0-9]{64}$/.test(sig||''))return false;const expected=createHmac('sha256',secret).update('clube-simple-v1:'+expiry+'.'+nonce).digest();return timingSafeEqual(expected,Buffer.from(sig,'hex'));}
 function simpleCookie(value,maxAge){return `${COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;}
@@ -45,7 +45,7 @@ export default async function handler(request){
     // A indisponibilidade do registro não deve impedir uma cliente pagante de entrar.
     console.error('[direct-login-activity]',String(e?.code||'registration_failed').slice(0,80));
    }
-   return Response.json({ok:true},{headers:{'Cache-Control':'no-store','Set-Cookie':simpleCookie(simpleToken(SUPABASE_SERVICE_ROLE_KEY),2592000)}});
+   return Response.json({ok:true},{headers:{'Cache-Control':'no-store','Set-Cookie':simpleCookie(simpleToken(SUPABASE_SERVICE_ROLE_KEY,id),2592000)}});
   }
   if(action==='send'){
    const {error}=await auth.auth.signInWithOtp({email:p.email,options:{shouldCreateUser:false}});
