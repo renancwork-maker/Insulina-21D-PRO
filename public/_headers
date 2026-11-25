@@ -1,5 +1,7 @@
+/
+  Cache-Control: no-store
 /index.html
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: no-store
 /js/config.js
   Cache-Control: public, max-age=0, must-revalidate
 /js/index-app-dia1a21-v3.js
@@ -34,12 +36,3 @@
 
 /js/vip-support.js
   Cache-Control: no-cache
-
-/app
-  Cache-Control: no-store
-/app.html
-  Cache-Control: no-store
-/app/*
-  Cache-Control: no-store
-/css/vitrine.css
-  Cache-Control: public, max-age=0, must-revalidate

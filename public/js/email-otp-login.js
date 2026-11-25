@@ -1,6 +1,6 @@
 (()=>{'use strict';
   if (/^\/(admin|ativar|recuperar-senha)(\/|$)/.test(location.pathname)) return;
-  const params=new URLSearchParams(location.search);if(!params.has('privado')&&!params.has('novo')){try{if(localStorage.getItem('clube-simple-current'))fetch('/api/purchase-direct-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'simple-status'})}).then(r=>{if(r.ok)location.replace('/app/simples'+location.search);else if(r.status===401){const k=localStorage.getItem('clube-simple-current');if(k)localStorage.removeItem(k);localStorage.removeItem('clube-simple-current')}}).catch(()=>{})}catch{}}
+  const params=new URLSearchParams(location.search);if(!params.has('privado')&&!params.has('novo')){try{if(localStorage.getItem('clube-simple-current'))fetch('/api/purchase-direct-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'simple-status'})}).then(r=>{if(r.ok)location.replace('/acesso-simples.html');else if(r.status===401){const k=localStorage.getItem('clube-simple-current');if(k)localStorage.removeItem(k);localStorage.removeItem('clube-simple-current')}}).catch(()=>{})}catch{}}
   const css=`
     #cs-direct-cover{position:fixed;inset:0;z-index:2147483600;overflow-y:auto;background:linear-gradient(155deg,#153e30,#225941);display:flex;align-items:center;justify-content:center;padding:24px;font-family:Poppins,system-ui,sans-serif;color:#153e30}
     #cs-direct-cover[hidden]{display:none!important}
@@ -49,10 +49,10 @@
     try{
       const res=await fetch('/api/purchase-direct-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier,action,code:action==='verify'?code.value.trim():undefined})});const body=await res.json();
       if(!res.ok){showMessage(body.error==='purchase_not_found'?'Compra não localizada. Confira o e-mail ou celular informado.':body.error==='invalid_code'?'Código incorreto ou expirado. Confira ou solicite outro.':'Não foi possível continuar. Tente novamente ou fale com o suporte.',true);return;}
-      if(action==='direct'){try{const k=localStorage.getItem('clube-simple-current');if(k)localStorage.removeItem(k);localStorage.removeItem('clube-simple-current')}catch{}sessionStorage.removeItem('clube-simple-tab-v1');location.assign('/app/simples'+location.search);return;}
+      if(action==='direct'){try{const k=localStorage.getItem('clube-simple-current');if(k)localStorage.removeItem(k);localStorage.removeItem('clube-simple-current')}catch{}sessionStorage.removeItem('clube-simple-tab-v1');location.assign('/acesso-simples.html');return;}
       if(action==='send'){sent=true;field.readOnly=true;codeRow.hidden=resend.hidden=change.hidden=false;code.focus();showMessage('Se houver uma compra aprovada, o código chegará ao e-mail da compra. Confira o spam.');return;}
       const {error}=await sb.auth.setSession({access_token:body.access_token,refresh_token:body.refresh_token});if(error)throw error;
-      location.replace('/app'+location.search+location.hash);
+      location.replace('/'+location.search);
     }catch{showMessage('Não foi possível concluir o acesso. Tente novamente.',true)}
     finally{busy=false;submit.disabled=resend.disabled=false;submit.textContent=sent?'Confirmar código':privateMode?'Enviar código':'Entrar no aplicativo';}
   }
