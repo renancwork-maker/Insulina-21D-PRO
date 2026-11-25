@@ -34,7 +34,19 @@ export default async function handler(request){
   const {data:payments,error:te}=await admin.from('wiapy_transactions').select('tier,status').eq('user_id',id).eq('status','paid').limit(100);if(te)throw te;
   if(!(payments||[]).some(x=>['basic','premium'].includes(x.tier)))return absent();
   // Direct access is deliberately NOT a Supabase identity or account session.
-  if(action==='direct')return Response.json({ok:true},{headers:{'Cache-Control':'no-store','Set-Cookie':simpleCookie(simpleToken(SUPABASE_SERVICE_ROLE_KEY),2592000)}});
+  if(action==='direct'){
+   // Registrar somente depois de identificar uma compra paga. Não concede identidade Auth.
+   const ua=request.headers.get('user-agent')||'';
+   const os=/iPhone|iPad|iPod/i.test(ua)?'ios':/Android/i.test(ua)?'android':/Windows|Macintosh|Linux|CrOS/i.test(ua)?'desktop':'other';
+   try {
+    const {error}=await admin.rpc('clube_registrar_login_simples',{p_user_id:id,p_os:os});
+    if(error)throw error;
+   } catch(e) {
+    // A indisponibilidade do registro não deve impedir uma cliente pagante de entrar.
+    console.error('[direct-login-activity]',String(e?.code||'registration_failed').slice(0,80));
+   }
+   return Response.json({ok:true},{headers:{'Cache-Control':'no-store','Set-Cookie':simpleCookie(simpleToken(SUPABASE_SERVICE_ROLE_KEY),2592000)}});
+  }
   if(action==='send'){
    const {error}=await auth.auth.signInWithOtp({email:p.email,options:{shouldCreateUser:false}});
    if(error&&![429,400].includes(error.status))throw error;
