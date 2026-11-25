@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const src=read('public/js/protocol-main.js');
+const ctx=vm.createContext({window:{},Intl,Date,journey:null,profile:{},uid:()=> 'test',check:r=>r.data,home(){ctx.opened=true},svc:()=>({from:()=>({upsert:async row=>{ctx.saved=row;return {data:row}}})})});
+vm.runInContext(read('public/js/protocol-model.js'),ctx);ctx.M=ctx.window.ProtocolModel;
+vm.runInContext(src.slice(src.indexOf('function state()'),src.indexOf('function dayView('))+src.slice(src.indexOf('async function afterOnboarding()'),src.indexOf('function historyReplace()')),ctx);
+await vm.runInContext('afterOnboarding()',ctx);assert.equal(ctx.saved.start_date,ctx.M.dateNow());assert.equal(ctx.opened,true);assert.equal(vm.runInContext('state().day',ctx),1);
+ctx.saved=null;ctx.journey={start_date:ctx.M.shift(ctx.M.dateNow(),-4),ingredients_confirmed:true};await vm.runInContext('afterOnboarding()',ctx);assert.equal(ctx.saved,null);assert.equal(vm.runInContext('state().day',ctx),5);
+ctx.journey={start_date:ctx.M.shift(ctx.M.dateNow(),3),ingredients_confirmed:true};await vm.runInContext('afterOnboarding()',ctx);assert.equal(ctx.saved,null);assert.equal(vm.runInContext('state().preview',ctx),true);
+const day=src.slice(src.indexOf('function dayView('),src.indexOf('function shoppingItems('));assert.ok(day.indexOf('id="p-secret"')<day.indexOf('id="p-shopping"'));assert.ok(day.indexOf('id="p-shopping"')<day.indexOf('Minha alimentação'));assert.ok(day.indexOf('Minha alimentação')<day.indexOf('Minha rotina diária'));assert.ok(!src.includes('p-confirm-shopping'));console.log('OK: início direto, data existente preservada, prévia futura, receitas e compras no topo, sem bloqueio de compras.');

@@ -10,12 +10,12 @@ const ctx=vm.createContext({profile:null,close(){},screen:'',overlay:null,home()
 vm.runInContext(extract,ctx);
 for(const completed of [false,true]){
  ctx.profile=completed?{age:45,weight_kg:70,height_cm:160}:null;
- for(const view of ['home','prep','secrets','onboarding','other']){
+ for(const view of ['home','day','prep','secrets','onboarding','other']){
  const html=vm.runInContext(`show('<h1>Teste</h1><button id="normal">Continuar</button>',{view:'${view}'}).innerHTML`,ctx);
  assert.ok(html.includes('id="normal"'));
- assert.equal(html.includes('https://pay.wiapy.com/qAaVu3gMsUAQ'),completed&&['home','prep','secrets'].includes(view));
+ assert.equal(html.includes('https://pay.wiapy.com/qAaVu3gMsUAQ'),completed&&['home','day'].includes(view));
  }
 }
-assert.match(read('public/index.html'),/protocol-main\.js\?v=13/);
-assert.match(read('public/js/simple-access.js'),/protocol-main\.js\?v=13/);
+assert.match(read('public/index.html'),/protocol-main\.js\?v=14/);
+assert.match(read('public/js/simple-access.js'),/protocol-main\.js\?v=14/);
 console.log('OK: PDF oculto antes do questionário e nas telas de edição; exibido após conclusão.');

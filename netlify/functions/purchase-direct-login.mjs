@@ -2,7 +2,6 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const validEmail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)&&v.length<=254;
-function phoneDigits(v){let d=String(v||'').replace(/\D/g,'');if(d.startsWith('55')&&[12,13].includes(d.length))d=d.slice(2);return [10,11].includes(d.length)?d:null;}
 const COOKIE='clube_simple_access';
 function simpleToken(secret,id){const localId=createHmac('sha256',secret).update('clube-local-account-v1:'+id).digest('hex').slice(0,48);const payload=`${Date.now()+30*24*60*60*1000}.${localId}`;return `${payload}.${createHmac('sha256',secret).update('clube-simple-v1:'+payload).digest('hex')}`;}
 function readCookie(request){return (request.headers.get('cookie')||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(COOKIE+'='))?.slice(COOKIE.length+1)||'';}
@@ -18,16 +17,14 @@ export default async function handler(request){
  if(body?.action==='simple-logout')return Response.json({ok:true},{headers:{'Cache-Control':'no-store','Set-Cookie':simpleCookie('',0)}});
  const input=String(body?.identifier||'').trim(),action=body?.action||'send';
  if(!input||input.length>254||!['send','verify','direct'].includes(action))return json({error:'invalid_identifier'},400);
- const email=input.includes('@')?input.toLowerCase():null,phone=email?null:phoneDigits(input);
- if((!email||!validEmail(email))&&!phone)return json({error:'invalid_identifier'},400);
+ const email=input.toLowerCase();
+ if(!validEmail(email))return json({error:'invalid_identifier'},400);
  const opts={auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}};
  const admin=createClient(SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,opts),auth=createClient(SUPABASE_URL,publicKey,opts);
  // Same response on send for absent purchases to avoid account enumeration.
  const absent=()=>action==='send'?json({ok:true}):json({error:action==='direct'?'purchase_not_found':'invalid_code'},401);
  try{
-  let id;
-  if(email){const {data,error}=await admin.from('profiles').select('id').eq('email',email).maybeSingle();if(error)throw error;id=data?.id;}
-  else {const {data,error}=await admin.from('wiapy_purchase_contacts').select('user_id').eq('phone_digits',phone).limit(100);if(error)throw error;const ids=[...new Set((data||[]).map(x=>x.user_id))];if(ids.length===1)id=ids[0];}
+  const {data:matched,error:matchError}=await admin.from('profiles').select('id').eq('email',email).maybeSingle();if(matchError)throw matchError;const id=matched?.id;
   if(!id)return absent();
   const {data:p,error:pe}=await admin.from('profiles').select('id,email,active').eq('id',id).maybeSingle();if(pe)throw pe;
   if(!p||p.active===false||!validEmail(p.email||''))return absent();

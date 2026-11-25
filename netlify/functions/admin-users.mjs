@@ -107,22 +107,33 @@ export default async function handler(request) {
       }
       if(!user?.id || (existingProfile?.id && existingProfile.id!==user.id))
         return answer({error:'account_conflict'},409);
-      // Atualiza somente o acesso, preservando os dados existentes.
-      const {error:upsertError}=await supabase.from('profiles').upsert({
-        id:user.id,email,active:true,plan:tier,admin_premium_override:tier==='premium'
-      },{onConflict:'id'});
-      if(upsertError){
-        console.error('manual customer profile update failed:',upsertError.code||'unknown');
-        return answer({error:'profile_update_failed',account_created:created},500);
+      // Registro interno estável por conta e plano; sem faturamento fictício.
+      // A RPC preserva pagamentos existentes, verifica estornos e recalcula o plano.
+      const paymentId=`ACESSO_MANUAL_${user.id}_${tier}`;
+      const {data:paymentStatus,error:paymentError}=await supabase.rpc('wiapy_apply_payment',{
+        p_payment_id:paymentId,p_user_id:user.id,p_email:email,
+        p_checkout_id:'checkout_teste_interno',p_amount_cents:0,
+        p_tier:tier,p_status:'paid',p_name:email.split('@')[0]
+      });
+      if(paymentError)throw paymentError;
+      if(paymentStatus!=='paid')return answer({error:'manual_payment_not_eligible'},409);
+      // Nunca desativar VIP ao liberar o acesso básico.
+      if(tier==='premium'){
+        const {error}=await supabase.rpc('clube_admin_set_premium',{
+          p_admin_id:auth.user.id,p_user_id:user.id,p_override:true
+        });
+        if(error)throw error;
       }
-      console.info('manual customer access set',JSON.stringify({admin:auth.user.id,userId:user.id,plan:tier}));
-      // O administrador envia somente instrucoes. O cliente solicita o OTP pelo app.
+      const {data:profile,error:readError}=await supabase.from('profiles').select('id,email,name,plan,active').eq('id',user.id).single();
+      if(readError)throw readError;
+      if(profile?.active!==true||!['basic','premium'].includes(profile.plan))return answer({error:'access_not_active'},409);
+      console.info('manual customer access set',JSON.stringify({admin:auth.user.id,userId:user.id,plan:profile.plan,paymentId}));
       try {
-        await sendResendEmail({to:email,emailMessage:buildAccessInstructionsEmail({email,appUrl:getAppUrl(),reason:'manual'}),idempotencyKey:`manual-instrucoes-${user.id}-${randomUUID()}`});
-        return answer({ok:true,userId:user.id,created,plan:tier,emailSent:true});
+        await sendResendEmail({to:email,emailMessage:buildAccessInstructionsEmail({email,name:profile.name||'',appUrl:getAppUrl(),reason:'corrected'}),idempotencyKey:`manual-instrucoes-${user.id}-${randomUUID()}`});
+        return answer({ok:true,userId:user.id,created,plan:profile.plan,emailSent:true});
       }catch(mailError){
         console.error('manual access email error:',String(mailError?.message||'error').slice(0,90));
-        return answer({ok:true,userId:user.id,created,plan:tier,emailSent:false,warning:'access_granted_but_email_failed'});
+        return answer({ok:true,userId:user.id,created,plan:profile.plan,emailSent:false,warning:'access_granted_but_email_failed'});
       }
     }
     if (!body || !validUUID(body.userId)) return answer({error:'invalid_user_id'},400);

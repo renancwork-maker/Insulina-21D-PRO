@@ -8,7 +8,7 @@ const code=file.replace("import { createClient } from '@supabase/supabase-js';",
 process.env.SUPABASE_URL='https://mock.invalid';process.env.SUPABASE_SERVICE_ROLE_KEY='test-only-secret';process.env.SUPABASE_ANON_KEY='test-only-public';
 const {default:handler}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
 const req=(body,cookie='')=>new Request('https://test.invalid/api/purchase-direct-login',{method:'POST',headers:{'Content-Type':'application/json',cookie},body:JSON.stringify(body)});
-for(const identifier of ['test@example.com','11999999999']){const res=await handler(req({action:'direct',identifier}));assert.equal(res.status,200);assert.deepEqual(await res.json(),{ok:true});const c=res.headers.get('set-cookie');assert.match(c,/HttpOnly; Secure; SameSite=Strict/);const cookie=c.split(';')[0];assert.equal((await handler(req({action:'simple-status'},cookie))).status,200);assert.equal((await handler(req({action:'simple-status'},cookie+'x'))).status,401);assert.equal((await handler(req({action:'simple-status'}))).status,401);assert.match((await handler(req({action:'simple-logout'},cookie))).headers.get('set-cookie'),/Max-Age=0/)}assert.equal(otpCalls,0);console.log('OK: e-mail/celular, acesso simples sem OTP ou token Supabase; cookie assinado, adulteração rejeitada, logout.');
+for(const identifier of ['test@example.com','TEST@example.com']){const res=await handler(req({action:'direct',identifier}));assert.equal(res.status,200);assert.deepEqual(await res.json(),{ok:true});const c=res.headers.get('set-cookie');assert.match(c,/HttpOnly; Secure; SameSite=Strict/);const cookie=c.split(';')[0];assert.equal((await handler(req({action:'simple-status'},cookie))).status,200);assert.equal((await handler(req({action:'simple-status'},cookie+'x'))).status,401);assert.equal((await handler(req({action:'simple-status'}))).status,401);assert.match((await handler(req({action:'simple-logout'},cookie))).headers.get('set-cookie'),/Max-Age=0/)}assert.equal(otpCalls,0);console.log('OK: e-mail, acesso simples sem OTP ou token Supabase; cookie assinado, adulteração rejeitada, logout.');
 
 assert.equal(writes.length,2);for(const w of writes){assert.equal(w.name,'clube_registrar_login_simples');assert.equal(w.args.p_user_id,'test-id');}
 paid=false;assert.equal((await handler(req({action:'direct',identifier:'test@example.com'}))).status,401);assert.equal(writes.length,2);
@@ -17,6 +17,6 @@ active=true;rpcFail=true;assert.equal((await handler(req({action:'direct',identi
 
 paid=true;active=true;rpcFail=false;
 const getLocalId=async identifier=>{const r=await handler(req({action:'direct',identifier}));const cookie=r.headers.get('set-cookie').split(';')[0];return (await (await handler(req({action:'simple-status'},cookie))).json()).local_id};
-assert.equal(await getLocalId('test@example.com'),await getLocalId('11999999999'));
+for(const action of ['direct','send','verify'])assert.equal((await handler(req({action,identifier:'11999999999'}))).status,400);
 assert.equal(await getLocalId('test@example.com'),await getLocalId('test@example.com'));
-console.log('OK: identificador persistente por comprador, mesmo por e-mail ou telefone.');
+console.log('OK: identificador persistente por comprador, por e-mail.');
