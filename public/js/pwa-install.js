@@ -3,18 +3,20 @@
   const ua=navigator.userAgent || '';
   const isIOS=/iPhone|iPad|iPod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
   const isAndroid=/Android/i.test(ua);
-  const isMobile=isIOS||isAndroid;
-  const isStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  const standaloneQuery=window.matchMedia('(display-mode: standalone)');
+  const isStandalone=()=>standaloneQuery.matches||navigator.standalone===true||window.matchMedia('(display-mode: fullscreen)').matches||window.matchMedia('(display-mode: minimal-ui)').matches;
+  let installedHere=false;
+  const installed=()=>installedHere||isStandalone();
   let deferredInstall=null;
   if('serviceWorker' in navigator && (location.protocol==='https:'||['localhost','127.0.0.1'].includes(location.hostname))) {
     addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{}));
   }
-  // Nenhum pop-up ou botão de instalação em PCs, notebooks ou no PWA já instalado.
-  if(!isMobile||isStandalone) return;
+  // Não mostrar instalação quando o PWA já está aberto.
+  if(isStandalone()) return;
   const style=document.createElement('style');
   style.textContent=`
-#cs-install-toggle{position:fixed;right:14px;bottom:calc(15px + env(safe-area-inset-bottom,0px));z-index:2147483000;background:#153b2f;color:#f3e2b1;border:1px solid #c2a45d;border-radius:22px;padding:11px 16px;font:700 13px system-ui;box-shadow:0 9px 26px #0003;cursor:pointer;display:none}
-#cs-install-overlay{position:fixed;inset:0;z-index:2147483500;background:rgba(4,25,18,.84);display:none;align-items:center;justify-content:center;padding:12px;overscroll-behavior:contain}
+#cs-install-toggle{position:fixed;left:14px;bottom:calc(15px + env(safe-area-inset-bottom,0px));z-index:2147483000;background:#153b2f;color:#f3e2b1;border:1px solid #c2a45d;border-radius:22px;padding:11px 16px;font:700 13px system-ui;box-shadow:0 9px 26px #0003;cursor:pointer;display:none}
+#cs-install-overlay{position:fixed;inset:0;z-index:2147483600;background:rgba(4,25,18,.84);display:none;align-items:center;justify-content:center;padding:12px;overscroll-behavior:contain}
 #cs-install-modal{background:#fcf8ef;border:1px solid #d9c086;border-radius:20px;color:#1a3c2e;box-shadow:0 18px 48px #0006;width:min(100%,440px);max-height:min(92dvh,840px);overflow:auto;padding:24px 18px;position:relative;font:15px/1.5 system-ui;-webkit-overflow-scrolling:touch}
 #cs-install-modal h2{font:800 22px/1.22 system-ui;margin:0 35px 8px 0}
 #cs-install-modal p{margin:9px 0}#cs-install-modal ol{padding-left:22px;margin:12px 0}#cs-install-modal li{margin:9px 0}
@@ -35,8 +37,11 @@
 #cs-install-media-wrap[hidden],#cs-install-video-wrap[hidden],#cs-install-gallery-wrap[hidden]{display:none!important}
 @media(max-width:390px){#cs-install-modal{padding:21px 14px}#cs-install-modal h2{font-size:21px}}
   `;
+  style.textContent+=`
+.cs-install-notice{position:relative;background:#eaf4e9;border:1px solid #b7d1b9;border-radius:14px;padding:14px;margin:12px 0 16px;color:#173d2c;font:16px/1.5 system-ui,sans-serif}.cs-install-notice strong{display:block;font-size:18px}.cs-install-notice p{margin:6px 0!important}.cs-install-notice a{color:#145c3b;overflow-wrap:anywhere;text-decoration:underline}.protocol-ui .cs-install-notice button{width:auto;min-height:46px;font-size:16px;margin:10px 0 0;padding:10px 16px;border-radius:20px;background:#196747}.cs-install-notice[hidden]{display:none!important}
+`;
   document.head.appendChild(style);
-  const toggle=document.createElement('button');toggle.id='cs-install-toggle';toggle.type='button';toggle.textContent='📲 Salvar aplicativo';
+  const toggle=document.createElement('button');toggle.id='cs-install-toggle';toggle.type='button';toggle.textContent='📲 Baixe o app aqui';
   const overlay=document.createElement('div');overlay.id='cs-install-overlay';overlay.setAttribute('role','presentation');
   overlay.innerHTML=`<section id="cs-install-modal" role="dialog" aria-modal="true" aria-labelledby="cs-install-title">
 <button type="button" id="cs-install-close" aria-label="Fechar tutorial">×</button>
@@ -98,20 +103,25 @@
     if(isIOS){
       steps.innerHTML='<p><b>iPhone / iPad — Safari</b></p><ol><li>Abra este site no <b>Safari</b> (se necessário).</li><li>Toque no botão <b>Compartilhar</b>.</li><li>Selecione <b>Adicionar à Tela de Início</b> — talvez seja necessário tocar em <b>Ver Mais</b>.</li><li>Ative <b>Abrir como app web</b>, se disponível, e toque em <b>Adicionar</b>.</li><li>Abra o ícone <b>Clube do Segredo</b> na tela inicial.</li></ol>';
       install.hidden=true;
-    }else{
+    }else if(isAndroid){
       steps.innerHTML='<p><b>Android — Google Chrome</b></p><ol><li>Abra o site no <b>Google Chrome</b>.</li><li>Toque no menu <b>⋮</b> (três pontos).</li><li>Escolha <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.</li><li>Confirme e abra o novo ícone do <b>Clube do Segredo</b>.</li></ol>';
       media.hidden=true;
       install.hidden=!deferredInstall;
+    }else{
+      steps.innerHTML='<p><b>Computador — Chrome ou Edge</b></p><ol><li>Procure o ícone de instalação na barra de endereço ou abra o menu do navegador.</li><li>Escolha Instalar aplicativo, se disponível.</li><li>Confirme para abrir o aplicativo pelo seu ícone.</li></ol><p>Se essa opção não estiver disponível, continue usando o site normalmente.</p>';media.hidden=true;install.hidden=!deferredInstall;
     }
   }
-  function show(){render();overlay.style.display='flex';if(isIOS && !video.getAttribute('src')) video.src=youtubeSrc;}
+  function show(){if(installed())return;render();overlay.style.display='flex';if(isIOS && !video.getAttribute('src')) video.src=youtubeSrc;}
   toggle.addEventListener('click',show);
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;if(overlay.style.display==='flex')render();});
-  install.addEventListener('click',async()=>{if(!deferredInstall)return;const e=deferredInstall;deferredInstall=null;e.prompt();try{await e.userChoice;}catch(_){}close();});
-  window.addEventListener('appinstalled',()=>{toggle.remove();close();});
+  install.addEventListener('click',async()=>{if(!deferredInstall)return;const e=deferredInstall;deferredInstall=null;try{await e.prompt();await e.userChoice;}catch(_){}close();});
+  function hideNotices(){toggle.style.display='none';document.querySelectorAll('.cs-install-notice').forEach(n=>n.remove());close();}
+  window.addEventListener('appinstalled',()=>{installedHere=true;hideNotices();});
+  standaloneQuery.addEventListener?.('change',()=>{if(installed())hideNotices();});
+  window.clubeInstallNotice=card=>{if(!card||installed()||card.querySelector('.cs-install-notice'))return;toggle.style.display='none';const notice=document.createElement('aside');notice.className='cs-install-notice';notice.innerHTML='<strong>Baixe o aplicativo para facilitar seu acesso!</strong><p>Você está usando o app pelo navegador. Recomendamos instalar para abrir suas refeições e receitas diretamente pela tela inicial.</p><p>Precisa de ajuda? <a href="mailto:suporte@digitalco.site">suporte@digitalco.site</a></p><button type="button">📲 BAIXE O APP AQUI</button>';notice.querySelector('button').onclick=show;card.querySelector('.p-header')?.after(notice);};
   // O tutorial nao abre automaticamente apos o login.
   // O comprador pode consultar o passo a passo somente quando quiser, pelo botao.
   window.addEventListener('clube:authenticated',()=>{
-    toggle.style.display='block';
+    if(!installed()&&!document.querySelector('.cs-install-notice'))toggle.style.display='block';
   });
 })();

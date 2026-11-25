@@ -15,6 +15,6 @@ for(const view of ['home','prep','secrets','onboarding','other']){
  if(view!=='other'){assert.match(html,/Compra opcional/);assert.match(html,/não precisa comprar novamente/);assert.match(html,/target="_blank" rel="noopener noreferrer"/)}
 }
 assert.match(src,/view:edit\?'other':'onboarding'/);
-assert.match(read('public/index.html'),/protocol-main\.js\?v=11/);
-assert.match(read('public/js/simple-access.js'),/protocol-main\.js\?v=11/);
+assert.match(read('public/index.html'),/protocol-main\.js\?v=12/);
+assert.match(read('public/js/simple-access.js'),/protocol-main\.js\?v=12/);
 console.log('OK: oferta PDF renderizada nas quatro telas, checkout correto e acesso comum preservado.');
