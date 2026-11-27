@@ -22,7 +22,7 @@
 #cs-install-modal p{margin:9px 0}#cs-install-modal ol{padding-left:22px;margin:12px 0}#cs-install-modal li{margin:9px 0}
 #cs-install-close{position:absolute;right:12px;top:9px;border:0;background:transparent;color:#173e2c;font-size:30px;cursor:pointer;line-height:1}
 #cs-install-native{width:100%;background:#164e38;color:#fff;border:0;border-radius:12px;padding:13px;font-weight:750;cursor:pointer;margin:10px 0}
-#cs-install-video{display:block;width:min(100%,230px);aspect-ratio:370/817;height:auto;margin:0 auto;background:#0b1e17;border:0;border-radius:12px}
+#cs-install-video{display:block;width:min(100%,290px);aspect-ratio:403/895;height:auto;margin:0 auto;background:#0b1e17;border:0;border-radius:12px}
 .cs-install-video-label{margin:12px 0 7px!important;font-weight:750;color:#183b2c}
 #cs-install-gallery{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin:12px 0 7px}
 .cs-install-thumb{border:2px solid transparent;padding:0;border-radius:7px;overflow:hidden;background:#e8e4d9;cursor:pointer;aspect-ratio:9/16}
@@ -40,28 +40,33 @@
   style.textContent+=`
 .cs-install-notice{position:relative;background:#eaf4e9;border:1px solid #b7d1b9;border-radius:14px;padding:14px;margin:12px 0 16px;color:#173d2c;font:16px/1.5 system-ui,sans-serif}.cs-install-notice strong{display:block;font-size:18px}.cs-install-notice p{margin:6px 0!important}.cs-install-notice a{color:#145c3b;overflow-wrap:anywhere;text-decoration:underline}.protocol-ui .cs-install-notice button{width:auto;min-height:46px;font-size:16px;margin:10px 0 0;padding:10px 16px;border-radius:20px;background:#196747}.cs-install-notice[hidden]{display:none!important}
 `;
+  style.textContent+=`
+.cs-install-notice{background:linear-gradient(135deg,#fff5d7,#eff8e9);border:2px solid #c3a34f;box-shadow:0 5px 16px #163c2520;padding:15px}.cs-install-top{display:flex;align-items:center;gap:12px}.cs-install-top img{width:54px;height:54px;border-radius:13px}.cs-install-top small{font-size:10px;font-weight:800;letter-spacing:1px;color:#795719}.cs-install-top strong{font-size:20px;line-height:1.2}.cs-install-benefits{font-size:13px;font-weight:700}.protocol-ui .cs-install-notice button{display:block;width:100%;min-height:52px;background:#196747;color:white;border-radius:12px;font-weight:850;box-shadow:0 4px 12px #19674740}.cs-install-help{font-size:12px!important;text-align:center}#cs-install-later{width:100%;border:1px solid #a8b8aa;background:transparent;color:#294b39;border-radius:10px;padding:12px;cursor:pointer;font:600 14px system-ui}#cs-install-native[hidden]{display:none!important}
+`;
   document.head.appendChild(style);
-  const toggle=document.createElement('button');toggle.id='cs-install-toggle';toggle.type='button';toggle.textContent='📲 Baixe o app aqui';
+  const toggle=document.createElement('button');toggle.id='cs-install-toggle';toggle.type='button';toggle.textContent='📲 INSTALAR APP';
   const overlay=document.createElement('div');overlay.id='cs-install-overlay';overlay.setAttribute('role','presentation');
   overlay.innerHTML=`<section id="cs-install-modal" role="dialog" aria-modal="true" aria-labelledby="cs-install-title">
 <button type="button" id="cs-install-close" aria-label="Fechar tutorial">×</button>
-<h2 id="cs-install-title">Salve o Clube do Segredo no celular 📲</h2>
-<p>Abra pelo ícone na tela inicial, sem precisar procurar o link.</p>
+<h2 id="cs-install-title">📲 Instale seu aplicativo agora!</h2>
+<p>Tenha suas receitas, refeições e rotina de 21 dias a um toque de distância. A instalação é gratuita e não precisa de loja de aplicativos.</p>
+<button type="button" id="cs-install-native" hidden>INSTALAR APP AGORA</button>
 <div id="cs-install-steps"></div>
 <div id="cs-install-media-wrap" hidden>
-  <div id="cs-install-video-wrap"><p class="cs-install-video-label">▶ Veja o vídeo de instalação (iPhone)</p><iframe id="cs-install-video" title="Passo a passo PWA" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+  <div id="cs-install-video-wrap"><p class="cs-install-video-label">▶ Veja o vídeo de instalação (${isAndroid?'Android':'iPhone'})</p><iframe id="cs-install-video" title="Passo a passo PWA" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
   <div id="cs-install-gallery-wrap"><p class="cs-install-video-label">📷 Passo a passo com imagens</p><div id="cs-install-gallery" aria-label="Escolha uma imagem do passo a passo"></div>
   <figure id="cs-install-figure"><img id="cs-install-step-image" alt="Imagem do passo a passo da instalação" loading="lazy"><figcaption id="cs-install-step-caption"></figcaption></figure>
   <div class="cs-install-arrows"><button id="cs-install-prev" type="button">← Anterior</button><button id="cs-install-next" type="button">Próxima →</button></div></div>
 </div>
-<button type="button" id="cs-install-native" hidden>Instalar agora</button>
+<p><button type="button" id="cs-install-later">Agora não, continuar no navegador</button></p>
 <p style="font-size:12px;color:#667c70">É necessário ter internet para fazer login e sincronizar o conteúdo.</p>
 </section>`;
   document.body.append(toggle,overlay);
   const video=overlay.querySelector('#cs-install-video');
-  const youtubeSrc='https://www.youtube.com/embed/WJZhYGfL4_w';
+  const youtubeSrc=isAndroid?'https://www.youtube.com/embed/TmqNrqpT9As':'https://www.youtube.com/embed/WJZhYGfL4_w';
   function close(){overlay.style.display='none';video.removeAttribute('src');}
   overlay.querySelector('#cs-install-close').addEventListener('click',close);
+  overlay.querySelector('#cs-install-later').addEventListener('click',close);
   overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
   const steps=overlay.querySelector('#cs-install-steps');
@@ -105,22 +110,36 @@
       install.hidden=true;
     }else if(isAndroid){
       steps.innerHTML='<p><b>Android — Google Chrome</b></p><ol><li>Abra o site no <b>Google Chrome</b>.</li><li>Toque no menu <b>⋮</b> (três pontos).</li><li>Escolha <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.</li><li>Confirme e abra o novo ícone do <b>Clube do Segredo</b>.</li></ol>';
-      media.hidden=true;
+      media.hidden=false;
+      galleryWrap.hidden=true;
       install.hidden=!deferredInstall;
     }else{
       steps.innerHTML='<p><b>Computador — Chrome ou Edge</b></p><ol><li>Procure o ícone de instalação na barra de endereço ou abra o menu do navegador.</li><li>Escolha Instalar aplicativo, se disponível.</li><li>Confirme para abrir o aplicativo pelo seu ícone.</li></ol><p>Se essa opção não estiver disponível, continue usando o site normalmente.</p>';media.hidden=true;install.hidden=!deferredInstall;
     }
   }
-  function show(){if(installed())return;render();overlay.style.display='flex';if(isIOS && !video.getAttribute('src')) video.src=youtubeSrc;}
+  function show(){if(installed())return;render();overlay.style.display='flex';if((isIOS||isAndroid) && !video.getAttribute('src')) video.src=youtubeSrc;}
   toggle.addEventListener('click',show);
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;if(overlay.style.display==='flex')render();});
   install.addEventListener('click',async()=>{if(!deferredInstall)return;const e=deferredInstall;deferredInstall=null;try{await e.prompt();await e.userChoice;}catch(_){}close();});
   function hideNotices(){toggle.style.display='none';document.querySelectorAll('.cs-install-notice').forEach(n=>n.remove());close();}
   window.addEventListener('appinstalled',()=>{installedHere=true;hideNotices();});
   standaloneQuery.addEventListener?.('change',()=>{if(installed())hideNotices();});
-  window.clubeInstallNotice=card=>{if(!card||installed()||card.querySelector('.cs-install-notice'))return;toggle.style.display='none';const notice=document.createElement('aside');notice.className='cs-install-notice';notice.innerHTML='<strong>Baixe o aplicativo para facilitar seu acesso!</strong><p>Você está usando o app pelo navegador. Recomendamos instalar para abrir suas refeições e receitas diretamente pela tela inicial.</p><p>Precisa de ajuda? <a href="mailto:suporte@digitalco.site">suporte@digitalco.site</a></p><button type="button">📲 BAIXE O APP AQUI</button>';notice.querySelector('button').onclick=show;card.querySelector('.p-header')?.after(notice);};
-  // O tutorial nao abre automaticamente apos o login.
-  // O comprador pode consultar o passo a passo somente quando quiser, pelo botao.
+  function remindOnce(){
+    if(installed()||!(isIOS||isAndroid))return;
+    const key='clube-install-reminder-v1';
+    const date=new Date().toLocaleDateString('en-CA');
+    try{if(localStorage.getItem(key)===date)return;localStorage.setItem(key,date);}catch(_){if(remindOnce.shown)return;}
+    remindOnce.shown=true;show();
+  }
+  window.clubeInstallNotice=(card,view)=>{
+    if(!card||installed()||card.querySelector('.cs-install-notice'))return;
+    toggle.style.display='none';
+    const notice=document.createElement('aside');notice.className='cs-install-notice';
+    notice.innerHTML='<div class="cs-install-top"><img src="/images/icon-192.png" alt=""><div><small>SEU APP NA TELA INICIAL</small><strong>📲 Instale o app no seu celular!</strong></div></div><p>Tenha suas receitas e refeições sempre à mão, sem precisar procurar o link novamente.</p><p class="cs-install-benefits">✓ Acesso com um toque &nbsp; ✓ Instalação gratuita</p><button type="button">BAIXAR APP AGORA →</button><p class="cs-install-help">Precisa de ajuda? <a href="mailto:suporte@digitalco.site">suporte@digitalco.site</a></p>';
+    notice.querySelector('button').onclick=show;card.querySelector('.p-header')?.after(notice);
+    if(view==='home'||view==='day')remindOnce();
+  };
+  // O convite automático é limitado a uma vez por dia neste navegador.
   window.addEventListener('clube:authenticated',()=>{
     if(!installed()&&!document.querySelector('.cs-install-notice'))toggle.style.display='block';
   });

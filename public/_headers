@@ -36,3 +36,6 @@
 
 /js/vip-support.js
   Cache-Control: no-cache
+
+/js/pwa-install.js
+  Cache-Control: no-cache
