@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import {accountCookie,clearAccountCookie} from './lib/vip-sessions.mjs';
+import {accountCookie,clearAccountCookie,accountFromCookie} from './lib/vip-sessions.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const validEmail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)&&v.length<=254;
 const COOKIE='clube_simple_access';
@@ -14,7 +14,15 @@ export default async function handler(request){
  const publicKey=SUPABASE_PUBLISHABLE_KEY||SUPABASE_ANON_KEY;
  if(!SUPABASE_URL||!SUPABASE_SERVICE_ROLE_KEY||!publicKey)return json({error:'service_unavailable'},503);
  let body;try{body=await request.json()}catch{return json({error:'invalid_request'},400)}
- if(body?.action==='simple-status')return simpleValid(request,SUPABASE_SERVICE_ROLE_KEY)?json({ok:true,local_id:readCookie(request).split('.')[1]}):json({error:'access_required'},401);
+ if(body?.action==='simple-status'){
+  if(!simpleValid(request,SUPABASE_SERVICE_ROLE_KEY))return json({error:'access_required'},401);
+  const id=accountFromCookie(request,SUPABASE_SERVICE_ROLE_KEY,'account');
+  if(!id)return json({error:'access_required'},401);
+  const admin=createClient(SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data,error}=await admin.from('clube_individual_plans').select('reset_version').eq('user_id',id).maybeSingle();
+  if(error)return json({error:'service_unavailable'},503);
+  return json({ok:true,local_id:readCookie(request).split('.')[1],...(data?{private_plan:true,reset_version:data.reset_version}:{})});
+ }
  if(body?.action==='simple-logout'){const headers=new Headers({'Cache-Control':'no-store','Set-Cookie':simpleCookie('',0)});headers.append('Set-Cookie',clearAccountCookie('account'));headers.append('Set-Cookie',clearAccountCookie('proof'));return Response.json({ok:true},{headers});}
  const input=String(body?.identifier||'').trim(),action=body?.action||'send';
  if(!input||input.length>254||!['send','verify','direct'].includes(action))return json({error:'invalid_identifier'},400);

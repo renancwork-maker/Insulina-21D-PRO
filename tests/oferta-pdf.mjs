@@ -16,6 +16,6 @@ for(const completed of [false,true]){
  assert.equal(html.includes('https://pay.wiapy.com/qAaVu3gMsUAQ'),completed&&['home','day'].includes(view));
  }
 }
-assert.match(read('public/index.html'),/protocol-main\.js\?v=15/);
-assert.match(read('public/js/simple-access.js'),/protocol-main\.js\?v=15/);
+assert.match(read('public/index.html'),/protocol-main\.js\?v=18/);
+assert.match(read('public/js/simple-access.js'),/protocol-main\.js\?v=18/);
 console.log('OK: PDF oculto antes do questionário e nas telas de edição; exibido após conclusão.');
