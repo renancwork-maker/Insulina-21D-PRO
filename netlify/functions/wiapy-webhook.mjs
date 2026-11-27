@@ -1,4 +1,4 @@
-import { timingSafeEqual, randomUUID } from 'node:crypto';
+import { timingSafeEqual, randomUUID, createHmac } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { buildEmail } from './email-templates.mjs';
 
@@ -130,6 +130,7 @@ export default async function handler(request) {
         .upsert({payment_id:paymentId,user_id:userId,phone_digits:phone},{onConflict:'payment_id'});
       if (contactError) console.warn('[wiapy] phone contact not saved',String(contactError.code || 'db_error'));
     }
+    if(tier==='premium'){try{const actor=createHmac('sha256',process.env.SUPABASE_SERVICE_ROLE_KEY).update('clube-local-account-v1:'+userId).digest('hex').slice(0,48);await admin.rpc('clube_vip_attribute',{p_actor:actor,p_payment_id:paymentId});}catch{/* Analytics nunca bloqueia compra ou e-mail. */}}
     const mail = await sendPurchaseEmail(admin,paymentId,tier,name,email,userId);
     return response({ok:true,action:'purchase_processed',tier,email_status:mail});
   } catch (error) {

@@ -69,7 +69,8 @@ async function login(event){event.preventDefault();clearAlert();let button=el('l
   sessionStorage.setItem('clube-admin-token',S.token);
   el('password').value='';el('login-view').hidden=true;el('dashboard').hidden=false;el('account').hidden=false;el('admin-email').textContent=el('email').value.trim();await load();
  }catch(e){S.token=null;sessionStorage.removeItem('clube-admin-token');alertUser(e.message);}finally{button.disabled=false;}}
-async function load(){clearAlert();loadDemographics();loadAppActivity();const tb=el('customer-rows');tb.replaceChildren(node('tr',''));
+async function loadVipFunnel(){try{const {statistics}=await api("?view=vip_funnel");for(const k of ["offer_view","offer_click","presentation_open","video_click","checkout_click","paid_after_click"])el("vip-"+k).textContent=Number(statistics?.[k])||0;el("vip-funnel-note").textContent="Compras aprovadas no mesmo cadastro em até 7 dias após clicar; não prova origem exclusiva. Não mede carregamento do checkout externo.";}catch{el("vip-funnel-note").textContent="Para ativar as métricas, execute supabase/10_FUNIL_VIP.sql no SQL Editor.";}}
+async function load(){clearAlert();loadVipFunnel();loadDemographics();loadAppActivity();const tb=el('customer-rows');tb.replaceChildren(node('tr',''));
  try{const data=await api(`?page=${S.page}&search=${encodeURIComponent(S.search)}`);S.total=data.total;el('total').textContent=data.total;el('visible').textContent=data.users.length;el('current-page').textContent=S.page;el('page-label').textContent=`Página ${S.page} de ${Math.max(1,Math.ceil(S.total/50))}`;el('prev').disabled=S.page<=1;el('next').disabled=S.page*50>=S.total;
  tb.replaceChildren();if(!data.users.length){const tr=node('tr');const col=td('Nenhum cliente encontrado.');col.colSpan=7;tr.append(col);tb.append(tr);}else for(const u of data.users){const tr=node('tr');const first=node('td');first.append(node('strong',u.name||'Sem nome'),node('small',u.email));tr.append(first);
  const p=node('td');p.append(node('span',planName(u.plan),'pill '+(u.plan||'')));tr.append(p);
@@ -118,7 +119,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
  el('manual-customer-form').onsubmit=addManualCustomer;
  el('app-activity-reload').onclick=loadAppActivity;
  setInterval(()=>{if(S.token&&!el('dashboard').hidden&&document.visibilityState==='visible')loadAppActivity()},30000);
- el('analytics-reload').onclick=loadDemographics;
+ el('analytics-reload').onclick=loadDemographics;el('vip-funnel-reload').onclick=loadVipFunnel;
  el('login-form').onsubmit=login;el('logout').onclick=()=>logout();el('reload').onclick=()=>load();el('close-detail').onclick=()=>{el('detail').hidden=true;S.selected=null;};
  el('search-form').onsubmit=e=>{e.preventDefault();S.page=1;S.search=el('search').value.trim();load();};el('prev').onclick=()=>{if(S.page>1){S.page--;load();}};el('next').onclick=()=>{if(S.page*50<S.total){S.page++;load();}};
  el('enable-vip').onclick=()=>premium(true);el('disable-vip').onclick=()=>premium(false);el('auto-vip').onclick=()=>premium(null);el('reset-password').onclick=reset;

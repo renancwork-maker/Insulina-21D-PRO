@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createHmac} from 'node:crypto';
+import {actorKey,accountCookie} from '../netlify/functions/lib/vip-sessions.mjs';
+const secret='test-secret',id='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',other='bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+Object.assign(process.env,{SUPABASE_URL:'https://mock.invalid',SUPABASE_SERVICE_ROLE_KEY:secret,SUPABASE_ANON_KEY:'anon'});
+let paid=true,checkedId;
+globalThis.mock=()=>({from(){const q={select(){return q},eq(k,v){if(k==='user_id')checkedId=v;return q},gt(k,v){assert.equal(k,'amount_cents');assert.equal(v,0);return q},limit(){return Promise.resolve({data:paid?[{tier:'premium',status:'paid'}]:[],error:null})}};return q;}});
+const code=(await readFile(new URL('../netlify/functions/vip-support.mjs',import.meta.url),'utf8')).replace("import { createClient } from '@supabase/supabase-js';",'const createClient=globalThis.mock;').replace('./lib/vip-sessions.mjs',new URL('../netlify/functions/lib/vip-sessions.mjs',import.meta.url).href);
+const {default:handler}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+function simple(id){const payload=`${Date.now()+60000}.${actorKey(secret,id)}`;return `clube_simple_access=${payload}.${createHmac('sha256',secret).update('clube-simple-v1:'+payload).digest('hex')}`}
+const account=(id,kind)=>accountCookie(secret,id,kind).split(';')[0];
+const req=async cookie=>(await handler(new Request('https://mock.invalid/api/vip-support',{method:'POST',headers:{cookie}}))).json();
+const base=simple(id)+'; '+account(id,'account');
+let r=await req(base);assert.equal(r.vip_pending,true);assert.equal(r.whatsapp,undefined);
+r=await req(base+'; '+account(id,'proof'));assert.equal(r.vip,true);assert.equal(checkedId,id);assert.equal(r.whatsapp,'https://wa.me/5511932383351');
+r=await req(base+'; '+account(other,'proof'));assert.equal(r.whatsapp,undefined);
+r=await req(base+'; '+account(id,'proof')+'x');assert.equal(r.whatsapp,undefined);
+r=await req(account(id,'proof'));assert.equal(r.whatsapp,undefined);
+paid=false;r=await req(base+'; '+account(id,'proof'));assert.equal(r.whatsapp,undefined);
+console.log('OK: VIP simples com prova de e-mail vinculada à conta, revalidação de pagamento, bloqueio de troca de conta, cookie adulterado e ausência de sessão.');

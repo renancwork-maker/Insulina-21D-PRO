@@ -36,6 +36,7 @@ export default async function handler(request) {
 
     if (request.method === 'GET') {
       const url = new URL(request.url);
+      if (url.searchParams.get('view') === 'vip_funnel') {const {data,error}=await supabase.rpc('clube_vip_statistics');if(error)return answer({error:'vip_analytics_unavailable'},503);return answer({statistics:data});}
       if (url.searchParams.get('view') === 'app_activity') {
         const admins = [...allowed];
         const {data,error} = await supabase.rpc('clube_admin_app_activity',{p_admin_emails:admins});

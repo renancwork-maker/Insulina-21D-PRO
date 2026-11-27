@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 const file=await readFile(new URL('../netlify/functions/purchase-direct-login.mjs',import.meta.url),'utf8');
 let otpCalls=0;let writes=[];let paid=true;let active=true;let rpcFail=false;
 globalThis.__mockClient=()=>({rpc:async(name,args)=>{writes.push({name,args});return {error:rpcFail?{code:"TEST_ERROR"}:null}},from(table){let q={select(){return q},eq(){return q},limit(){return q},maybeSingle(){return q},then(ok,fail){const data=table==='profiles'?{id:'test-id',email:'test@example.com',active:active}:table==='wiapy_transactions'?(paid?[{tier:'basic',status:'paid'}]:[]):[{user_id:'test-id'}];return Promise.resolve({data,error:null}).then(ok,fail)}};return q},auth:{signInWithOtp(){otpCalls++;throw Error('not expected')},verifyOtp(){otpCalls++;throw Error('not expected')}}});
-const code=file.replace("import { createClient } from '@supabase/supabase-js';",'const createClient=globalThis.__mockClient;');
+const code=file.replace("import { createClient } from '@supabase/supabase-js';",'const createClient=globalThis.__mockClient;').replace('./lib/vip-sessions.mjs',new URL('../netlify/functions/lib/vip-sessions.mjs',import.meta.url).href);
 process.env.SUPABASE_URL='https://mock.invalid';process.env.SUPABASE_SERVICE_ROLE_KEY='test-only-secret';process.env.SUPABASE_ANON_KEY='test-only-public';
 const {default:handler}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
 const req=(body,cookie='')=>new Request('https://test.invalid/api/purchase-direct-login',{method:'POST',headers:{'Content-Type':'application/json',cookie},body:JSON.stringify(body)});
